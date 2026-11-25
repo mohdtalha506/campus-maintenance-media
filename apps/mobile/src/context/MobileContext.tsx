@@ -304,13 +304,14 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
     const appStateSub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void refreshNotifications();
+        void registerDevicePushToken();
       }
     });
     return () => {
       sub.remove();
       appStateSub.remove();
     };
-  }, [refreshNotifications, user]);
+  }, [refreshNotifications, registerDevicePushToken, user]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -318,12 +319,13 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
       setIsOnline(onlineNow);
       if (onlineNow && !wasOnlineRef.current && user) {
         void refreshLocations();
+        void registerDevicePushToken();
         void runSyncForUser(user);
       }
       wasOnlineRef.current = onlineNow;
     });
     return () => unsubscribe();
-  }, [refreshLocations, runSyncForUser, user]);
+  }, [refreshLocations, registerDevicePushToken, runSyncForUser, user]);
 
   const updateApiBaseUrl = useCallback(async (url: string) => {
     await saveApiBaseUrlOverride(url);
@@ -406,7 +408,7 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   const runSyncNow = useCallback(async () => {
     await refreshLocations();
     await runSyncForUser(user);
-  }, [refreshLocations, runSyncForUser, user]);
+  }, [refreshLocations, registerDevicePushToken, runSyncForUser, user]);
 
   return (
     <MobileContext.Provider

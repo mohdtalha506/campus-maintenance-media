@@ -114,7 +114,7 @@ ticketRouter.post(
     if (!result.idempotentReplay) {
       const supIds = await getActiveSupervisorIds();
       const t = result.ticket;
-      void notifyUsers({
+      await notifyUsers({
         userIds: supIds,
         excludeUserId: req.user!.id,
         ticketId: t.id,
@@ -122,7 +122,7 @@ ticketRouter.post(
         title: `New Issue ${t.ticketNumber}`,
         body: `${t.title} · ${t.building.name} Rm ${t.room.roomNumber}`,
         eventType: 'created',
-      });
+      }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
     }
 
     res.status(result.idempotentReplay ? 200 : 201).json(result);
@@ -156,7 +156,7 @@ ticketRouter.patch(
       expectedVersion: body.expectedVersion,
     });
 
-    void notifyUsers({
+    await notifyUsers({
       userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
       excludeUserId: req.user!.id,
       ticketId: ticket.id,
@@ -164,7 +164,7 @@ ticketRouter.patch(
       title: `Assigned: ${ticket.ticketNumber}`,
       body: `${ticket.title} · ${ticket.building.name} Rm ${ticket.room.roomNumber}`,
       eventType: 'assigned',
-    });
+    }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
 
     res.json({ ticket });
   })
@@ -199,7 +199,7 @@ ticketRouter.post(
     });
 
     const supIds = await getActiveSupervisorIds();
-    void notifyUsers({
+    await notifyUsers({
       userIds: [ticket.reporter.id, ...supIds],
       excludeUserId: req.user!.id,
       ticketId: ticket.id,
@@ -207,7 +207,7 @@ ticketRouter.post(
       title: `Work Started: ${ticket.ticketNumber}`,
       body: `${req.user!.name} started repair on "${ticket.title}"`,
       eventType: 'work_started',
-    });
+    }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
 
     res.json({ ticket });
   })
@@ -238,7 +238,7 @@ ticketRouter.post(
     });
 
     const supIds = await getActiveSupervisorIds();
-    void notifyUsers({
+    await notifyUsers({
       userIds: [ticket.reporter.id, ...supIds],
       excludeUserId: req.user!.id,
       ticketId: ticket.id,
@@ -246,7 +246,7 @@ ticketRouter.post(
       title: `Repair Ready: ${ticket.ticketNumber}`,
       body: `${req.user!.name} submitted repair proof for verification`,
       eventType: 'repair_submitted',
-    });
+    }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
 
     res.json({ ticket });
   })
@@ -265,7 +265,7 @@ ticketRouter.post(
       expectedVersion: body.expectedVersion,
     });
 
-    void notifyUsers({
+    await notifyUsers({
       userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
       excludeUserId: req.user!.id,
       ticketId: ticket.id,
@@ -273,7 +273,7 @@ ticketRouter.post(
       title: `Closed: ${ticket.ticketNumber}`,
       body: `"${ticket.title}" has been verified and closed`,
       eventType: 'closed',
-    });
+    }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
 
     res.json({ ticket });
   })
@@ -292,7 +292,7 @@ ticketRouter.post(
       expectedVersion: body.expectedVersion,
     });
 
-    void notifyUsers({
+    await notifyUsers({
       userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
       excludeUserId: req.user!.id,
       ticketId: ticket.id,
@@ -300,7 +300,7 @@ ticketRouter.post(
       title: `Reopened: ${ticket.ticketNumber}`,
       body: `Reason: ${body.reason}`,
       eventType: 'reopened',
-    });
+    }).catch((error: unknown) => { console.error('Ticket notification failed:', error); });
 
     res.json({ ticket });
   })

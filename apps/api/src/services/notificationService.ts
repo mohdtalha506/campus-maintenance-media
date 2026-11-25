@@ -100,6 +100,7 @@ async function sendExpoPushMessages(
         family: 4,
         timeout: 12000,
         headers: {
+          ...(process.env.EXPO_ACCESS_TOKEN ? { Authorization: 'Bearer ' + process.env.EXPO_ACCESS_TOKEN } : {}),
           Accept: 'application/json',
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payload),
@@ -117,7 +118,10 @@ async function sendExpoPushMessages(
             json = rawText;
           }
           const status = res.statusCode ?? 0;
-          const ok = status >= 200 && status < 300;
+          const response = json as { data?: Array<{ status: string; message?: string; details?: unknown }>; errors?: unknown[] } | null;
+          const failures = Array.isArray(response?.data) ? response.data.filter((ticket) => ticket.status === 'error') : [];
+          const ok = status >= 200 && status < 300 && failures.length === 0 && !response?.errors?.length;
+          if (failures.length) console.error('Expo push ticket errors:', failures);
           if (!ok) {
             console.error('Expo push HTTP error:', status, json);
           }
@@ -204,7 +208,9 @@ export async function notifyUsers(params: {
       },
     }));
 
-  await sendExpoPushMessages(expoMessages);
+  for (let offset = 0; offset < expoMessages.length; offset += 100) {
+    await sendExpoPushMessages(expoMessages.slice(offset, offset + 100));
+  }
 }
 
 export async function sendTestPushToUser(userId: string): Promise<{
