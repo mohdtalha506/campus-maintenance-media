@@ -94,7 +94,7 @@ async function sendExpoPushMessages(
   const payload = JSON.stringify(messages);
   return new Promise((resolve) => {
     const req = https.request(
-      'https://exp.pushservice.com/api/v2/push/send',
+      'https://exp.host/--/api/v2/push/send',
       {
         method: 'POST',
         family: 4,
