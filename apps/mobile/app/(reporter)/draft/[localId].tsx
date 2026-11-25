@@ -8,13 +8,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MAINTENANCE_CATEGORIES, type MaintenanceCategory } from '@campus/shared';
 import { mobileApi } from '../../../src/api/mobileApi';
-import { AppButton, AudioPlaybackButton, PillBadge } from '../../../src/components/UiPrimitives';
+import {
+  AppButton,
+  AudioPlaybackButton,
+  PillBadge,
+  SectionCard,
+} from '../../../src/components/UiPrimitives';
 import { useMobile } from '../../../src/context/MobileContext';
 import { deleteDurableMedia } from '../../../src/storage/mediaFiles';
 import { getDraftById } from '../../../src/storage/sqliteDb';
+import { CATEGORY_STYLE, COLORS } from '../../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../../src/types/draft';
 
 export default function ReviewDraftScreen() {
@@ -196,20 +203,34 @@ export default function ReviewDraftScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.location}>
-          {draft.buildingName} · Room {draft.roomNumber} ({draft.roomName})
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-          <PillBadge label={`AI: ${draft.aiStatus}`} bg="#dbeafe" fg="#1d4ed8" />
+      <View style={styles.locationBanner}>
+        <View style={styles.locRow}>
+          <Ionicons name="location" size={18} color="#93C5FD" />
+          <Text style={styles.location}>
+            {draft.buildingName} · Room {draft.roomNumber} ({draft.roomName})
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <PillBadge
+            label={`AI: ${draft.aiStatus}`}
+            bg={COLORS.primarySoft}
+            fg={COLORS.primary}
+            icon="sparkles"
+          />
           {draft.aiDraft?.isMock && (
-            <PillBadge label="Mock AI Output" bg="#fef3c7" fg="#b45309" />
+            <PillBadge
+              label="Mock AI Output"
+              bg={COLORS.amberSoft}
+              fg={COLORS.amber}
+              icon="flask-outline"
+            />
           )}
         </View>
       </View>
 
       {draft.aiStatus === 'queued' && (
         <View style={styles.infoBox}>
+          <Ionicons name="time-outline" size={18} color={COLORS.primary} />
           <Text style={styles.infoText}>
             AI draft is queued offline and will generate automatically when connectivity returns. You
             can also enter the details manually right now.
@@ -219,30 +240,32 @@ export default function ReviewDraftScreen() {
 
       {draft.aiError && (
         <View style={styles.warnBox}>
+          <Ionicons name="warning-outline" size={18} color={COLORS.amber} />
           <Text style={styles.warnText}>{draft.aiError}</Text>
         </View>
       )}
 
       {error && (
         <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
       {message && (
         <View style={styles.infoBox}>
+          <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
           <Text style={styles.infoText}>{message}</Text>
         </View>
       )}
 
       {draft.aiDraft && (
-        <View style={styles.card}>
-          <Text style={styles.label}>Original Language Transcript</Text>
-          <Text style={styles.transcript}>{draft.aiDraft.transcript}</Text>
-        </View>
+        <SectionCard title="Voice Transcript" icon="chatbubble-ellipses-outline">
+          <Text style={styles.transcript}>“{draft.aiDraft.transcript}”</Text>
+        </SectionCard>
       )}
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Title (Editable English Report)</Text>
+      <SectionCard title="Editable English Report" icon="create-outline">
+        <Text style={styles.label}>Title</Text>
         <TextInput
           style={styles.input}
           value={title}
@@ -261,21 +284,29 @@ export default function ReviewDraftScreen() {
 
         <Text style={styles.label}>Category</Text>
         <View style={styles.catGrid}>
-          {MAINTENANCE_CATEGORIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.catPill, category === c && styles.catPillActive]}
-              onPress={() => setCategory(c)}
-            >
-              <Text style={[styles.catText, category === c && styles.catTextActive]}>{c}</Text>
-            </TouchableOpacity>
-          ))}
+          {MAINTENANCE_CATEGORIES.map((c) => {
+            const active = category === c;
+            const cfg = CATEGORY_STYLE[c];
+            return (
+              <TouchableOpacity
+                key={c}
+                style={[styles.catPill, active && styles.catPillActive]}
+                onPress={() => setCategory(c)}
+              >
+                <Ionicons
+                  name={cfg.icon as keyof typeof Ionicons.glyphMap}
+                  size={14}
+                  color={active ? '#FFFFFF' : cfg.fg}
+                />
+                <Text style={[styles.catText, active && styles.catTextActive]}>{c}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </View>
+      </SectionCard>
 
       {(draft.photoUri || draft.audioUri) && (
-        <View style={styles.card}>
-          <Text style={styles.label}>Captured Evidence (Saved Durably Offline)</Text>
+        <SectionCard title="Captured Evidence" subtitle="Saved durably offline" icon="attach-outline">
           {draft.photoUri && (
             <Image source={{ uri: draft.photoUri }} style={styles.previewImg} resizeMode="cover" />
           )}
@@ -284,20 +315,22 @@ export default function ReviewDraftScreen() {
               <AudioPlaybackButton uri={draft.audioUri} label="Play Voice Note" />
             </View>
           )}
-        </View>
+        </SectionCard>
       )}
 
       <View style={styles.actions}>
         {draft.audioUri && (
           <AppButton
             title={isOnline ? 'Generate / Refresh AI Draft' : 'Queue AI Draft'}
-            variant="secondary"
+            icon="sparkles-outline"
+            variant="soft"
             onPress={handleRetryAi}
             disabled={busy}
           />
         )}
         <AppButton
           title="Save Draft Locally"
+          icon="bookmark-outline"
           variant="secondary"
           onPress={async () => {
             await handleSaveEdits();
@@ -307,6 +340,7 @@ export default function ReviewDraftScreen() {
         />
         <AppButton
           title={isOnline ? 'Submit Ticket' : 'Queue Submission (Offline)'}
+          icon={isOnline ? 'send' : 'cloud-upload-outline'}
           onPress={handleSubmitTicket}
           loading={busy}
         />
@@ -316,46 +350,79 @@ export default function ReviewDraftScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f4f6f9' },
+  root: { flex: 1, backgroundColor: COLORS.canvas },
   container: { padding: 14, gap: 12, paddingBottom: 32 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: '#64748b' },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  muted: { color: COLORS.textMuted },
+  locationBanner: {
+    backgroundColor: COLORS.navy,
+    borderRadius: 14,
+    padding: 15,
   },
-  location: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  label: { fontSize: 13, fontWeight: '600', color: '#334155', marginTop: 8, marginBottom: 6 },
+  locRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  location: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', flex: 1 },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginTop: 10,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderColor: COLORS.borderStrong,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.surfaceMuted,
+    color: COLORS.text,
   },
-  transcript: { fontSize: 14, color: '#1e293b', fontStyle: 'italic' },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  transcript: { fontSize: 14, color: COLORS.text, fontStyle: 'italic', lineHeight: 20 },
+  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
   catPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: COLORS.borderStrong,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
+    backgroundColor: COLORS.surfaceMuted,
   },
-  catPillActive: { backgroundColor: '#1d4ed8', borderColor: '#1d4ed8' },
-  catText: { fontSize: 13, fontWeight: '600', color: '#334155' },
-  catTextActive: { color: '#ffffff' },
-  previewImg: { width: '100%', height: 190, borderRadius: 8, marginTop: 6 },
-  actions: { gap: 10 },
-  infoBox: { backgroundColor: '#dbeafe', padding: 10, borderRadius: 8 },
-  infoText: { color: '#1e40af', fontSize: 13 },
-  warnBox: { backgroundColor: '#fef3c7', padding: 10, borderRadius: 8 },
-  warnText: { color: '#92400e', fontSize: 13 },
-  errorBox: { backgroundColor: '#fee2e2', padding: 10, borderRadius: 8 },
-  errorText: { color: '#b91c1c', fontSize: 13 },
+  catPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  catText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  catTextActive: { color: '#FFFFFF' },
+  previewImg: { width: '100%', height: 200, borderRadius: 10, marginTop: 4 },
+  actions: { gap: 10, marginTop: 4 },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primarySoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  infoText: { flex: 1, color: COLORS.primary, fontSize: 13, fontWeight: '500' },
+  warnBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.amberSoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  warnText: { flex: 1, color: '#92400E', fontSize: 13 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.dangerSoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
 });

@@ -4,11 +4,21 @@
     "slug": "campus-maintenance-copilot",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "campuscopilot",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
     "android": {
       "package": "edu.campus.maintenancecopilot",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -40,7 +50,7 @@
       "expo-sqlite"
     ],
     "extra": {
-      "apiUrl": "http://10.0.2.2:4000",
+      "apiUrl": "https://campus-maintenance-media.onrender.com",
       "router": {
         "origin": false
       },
@@ -52,7 +62,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1"
+      "url": "https://u.expo.dev/b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "owner": "mohdtalha506",
     "runtimeVersion": {

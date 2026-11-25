@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { TicketDetailDTO } from '@campus/shared';
 import {
@@ -10,10 +11,13 @@ import {
 import {
   AppButton,
   AudioPlaybackButton,
+  CategoryChip,
   PRIORITY_COLORS,
   PillBadge,
   STATUS_COLORS,
+  SectionCard,
 } from '../../../src/components/UiPrimitives';
+import { COLORS } from '../../../src/theme/tokens';
 
 export default function TechnicianJobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -84,32 +88,39 @@ export default function TechnicianJobDetailScreen() {
     >
       {error && (
         <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      <View style={styles.card}>
+      <View style={styles.heroCard}>
         <View style={styles.badges}>
           <Text style={styles.ticketNum}>{ticket.ticketNumber}</Text>
-          <PillBadge label={ticket.status} bg={sColor.bg} fg={sColor.fg} />
-          <PillBadge label={ticket.priority} bg={pColor.bg} fg={pColor.fg} />
+          <PillBadge label={ticket.status} bg={sColor.bg} fg={sColor.fg} icon={sColor.icon} />
+          <PillBadge label={ticket.priority} bg={pColor.bg} fg={pColor.fg} icon={pColor.icon} />
+          <CategoryChip category={ticket.category} />
         </View>
         <Text style={styles.title}>{ticket.title}</Text>
-        <Text style={styles.location}>
-          {ticket.building.name} · {ticket.room.name} (Room {ticket.room.roomNumber},{' '}
-          {ticket.room.floor})
-        </Text>
-        <Text style={styles.desc}>{ticket.description}</Text>
+        <View style={styles.locRow}>
+          <Ionicons name="location-outline" size={15} color="#93C5FD" />
+          <Text style={styles.location}>
+            {ticket.building.name} · {ticket.room.name} (Room {ticket.room.roomNumber},{' '}
+            {ticket.room.floor})
+          </Text>
+        </View>
+      </View>
 
+      <SectionCard title="Issue Description" icon="document-text-outline">
+        <Text style={styles.desc}>{ticket.description}</Text>
         {ticket.reopenReason && (
-          <View style={styles.errorBox}>
+          <View style={[styles.errorBox, { marginTop: 10 }]}>
+            <Ionicons name="refresh-circle" size={18} color={COLORS.danger} />
             <Text style={styles.errorText}>Reopened Reason: {ticket.reopenReason}</Text>
           </View>
         )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Original Field Evidence</Text>
+      <SectionCard title="Original Field Evidence" icon="camera-outline">
         {beforePhoto ? (
           <Image
             source={{ uri: resolveMobileMediaUrl(beforePhoto.url), headers: authHeaders }}
@@ -128,15 +139,21 @@ export default function TechnicianJobDetailScreen() {
             />
           </View>
         )}
-      </View>
+      </SectionCard>
 
       {ticket.status === 'Assigned' && (
-        <AppButton title="Start Work" onPress={handleStartWork} loading={busy} />
+        <AppButton
+          title="Start Work"
+          icon="play-circle-outline"
+          onPress={handleStartWork}
+          loading={busy}
+        />
       )}
 
       {ticket.status === 'In Progress' && (
         <AppButton
           title="Submit Repair Photo & Note"
+          icon="checkmark-done-circle-outline"
           variant="success"
           onPress={() =>
             router.push({
@@ -151,25 +168,30 @@ export default function TechnicianJobDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f4f6f9' },
+  root: { flex: 1, backgroundColor: COLORS.canvas },
   container: { padding: 14, gap: 12, paddingBottom: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: '#64748b' },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  muted: { color: COLORS.textMuted },
+  heroCard: {
+    backgroundColor: COLORS.navy,
+    borderRadius: 14,
+    padding: 16,
     gap: 8,
   },
-  badges: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
-  ticketNum: { fontSize: 13, fontWeight: '700', color: '#1d4ed8' },
-  title: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  location: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  desc: { fontSize: 14, color: '#1e293b', lineHeight: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  img: { width: '100%', height: 210, borderRadius: 8 },
-  errorBox: { backgroundColor: '#fee2e2', padding: 10, borderRadius: 8 },
-  errorText: { color: '#b91c1c', fontSize: 13 },
+  badges: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
+  ticketNum: { fontSize: 13, fontWeight: '800', color: '#93C5FD', marginRight: 4 },
+  title: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 24 },
+  locRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  location: { fontSize: 13, fontWeight: '500', color: '#CBD5E1', flex: 1 },
+  desc: { fontSize: 14, color: COLORS.text, lineHeight: 21 },
+  img: { width: '100%', height: 210, borderRadius: 10 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.dangerSoft,
+    padding: 10,
+    borderRadius: 10,
+  },
+  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
 });

@@ -9,10 +9,14 @@ import type {
   UserSummaryDTO,
 } from '@campus/shared';
 
+const PRODUCTION_FALLBACK_URL = 'https://campus-maintenance-media.onrender.com';
+
 const defaultApiUrl =
   process.env.EXPO_PUBLIC_API_URL ??
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ??
-  'http://10.0.2.2:4000';
+  (typeof __DEV__ !== 'undefined' && __DEV__
+    ? 'http://10.0.2.2:4000'
+    : PRODUCTION_FALLBACK_URL);
 
 let currentBaseUrl = defaultApiUrl.replace(/\/$/, '');
 let currentToken: string | null = null;
@@ -50,7 +54,7 @@ export class MobileApiError extends Error {
   }
 }
 
-async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function apiRequest<T>(path: string, init: RequestInit = {}, timeoutMs = 25000): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
   const headers: Record<string, string> = {
     'X-Client-Type': 'mobile',
@@ -59,10 +63,23 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...((init.headers as Record<string, string> | undefined) ?? {}),
   };
 
-  const res = await fetch(`${currentBaseUrl}${path}`, {
-    ...init,
-    headers,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${currentBaseUrl}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new MobileApiError(408, 'TIMEOUT', 'Server request timed out. Please try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     let code = 'HTTP_ERROR';

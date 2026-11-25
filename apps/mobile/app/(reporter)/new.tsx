@@ -7,14 +7,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { mobileApi } from '../../src/api/mobileApi';
-import { AppButton, AudioPlaybackButton } from '../../src/components/UiPrimitives';
+import {
+  AppButton,
+  AudioPlaybackButton,
+  SectionCard,
+} from '../../src/components/UiPrimitives';
 import { useMobile } from '../../src/context/MobileContext';
 import { persistDraftMedia } from '../../src/storage/mediaFiles';
+import { COLORS } from '../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../src/types/draft';
 
 export default function NewReportScreen() {
@@ -30,7 +36,6 @@ export default function NewReportScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -180,12 +185,10 @@ export default function NewReportScreen() {
     setPhotoMimeType(null);
     setAudioUri(null);
     setAudioMimeType(null);
-    setStatusMsg(null);
   }
 
   async function handleGenerateAiOrQueue() {
     setError(null);
-    setStatusMsg(null);
     if (!audioUri) {
       setError('Record a voice note first, or tap "Continue Manually".');
       return;
@@ -261,10 +264,32 @@ export default function NewReportScreen() {
     }
   }
 
+  const completedSteps = [
+    Boolean(selectedBuildingId && selectedRoomId),
+    Boolean(photoUri),
+    Boolean(audioUri),
+  ].filter(Boolean).length;
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
+      <View style={styles.progressBarCard}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressTitle}>Inspection Checklist</Text>
+          <Text style={styles.progressCount}>{completedSteps}/3 captured</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.max(15, (completedSteps / 3) * 100)}%` },
+            ]}
+          />
+        </View>
+      </View>
+
       {!isOnline && (
         <View style={styles.offlineBanner}>
+          <Ionicons name="cloud-offline" size={18} color={COLORS.amber} />
           <Text style={styles.offlineText}>
             Offline mode active: cached campus locations and durable local storage are ready.
           </Text>
@@ -273,17 +298,16 @@ export default function NewReportScreen() {
 
       {error && (
         <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-      {statusMsg && (
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>{statusMsg}</Text>
-        </View>
-      )}
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>1. Select Building &amp; Room</Text>
+      <SectionCard
+        title="1. Campus Location"
+        subtitle="Select building and room"
+        icon="business-outline"
+      >
         {buildings.length === 0 ? (
           <Text style={styles.muted}>
             No cached buildings yet. Sign in online once to cache campus locations.
@@ -292,138 +316,258 @@ export default function NewReportScreen() {
           <>
             <Text style={styles.label}>Building</Text>
             <View style={styles.pillGrid}>
-              {buildings.map((b) => (
-                <TouchableOpacity
-                  key={b.id}
-                  style={[styles.pickPill, selectedBuildingId === b.id && styles.pickPillActive]}
-                  onPress={() => setSelectedBuildingId(b.id)}
-                >
-                  <Text
-                    style={[
-                      styles.pickText,
-                      selectedBuildingId === b.id && styles.pickTextActive,
-                    ]}
+              {buildings.map((b) => {
+                const active = selectedBuildingId === b.id;
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={[styles.pickPill, active && styles.pickPillActive]}
+                    onPress={() => setSelectedBuildingId(b.id)}
                   >
-                    {b.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Ionicons
+                      name="business"
+                      size={14}
+                      color={active ? '#FFFFFF' : COLORS.textSecondary}
+                    />
+                    <Text style={[styles.pickText, active && styles.pickTextActive]}>
+                      {b.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <Text style={styles.label}>Room</Text>
             <View style={styles.pillGrid}>
-              {filteredRooms.map((r) => (
-                <TouchableOpacity
-                  key={r.id}
-                  style={[styles.pickPill, selectedRoomId === r.id && styles.pickPillActive]}
-                  onPress={() => setSelectedRoomId(r.id)}
-                >
-                  <Text
-                    style={[styles.pickText, selectedRoomId === r.id && styles.pickTextActive]}
+              {filteredRooms.map((r) => {
+                const active = selectedRoomId === r.id;
+                return (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={[styles.pickPill, active && styles.pickPillActive]}
+                    onPress={() => setSelectedRoomId(r.id)}
                   >
-                    Room {r.roomNumber} · {r.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Ionicons
+                      name="location"
+                      size={14}
+                      color={active ? '#FFFFFF' : COLORS.textSecondary}
+                    />
+                    <Text style={[styles.pickText, active && styles.pickTextActive]}>
+                      Room {r.roomNumber} · {r.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </>
         )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>2. Capture Issue Photo</Text>
+      <SectionCard
+        title="2. Issue Photo"
+        subtitle="Capture clear evidence of the problem"
+        icon="camera-outline"
+      >
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <AppButton
-            title="Take Photo"
-            variant="secondary"
+            title="Camera"
+            icon="camera"
+            variant="soft"
             onPress={() => capturePhoto(true)}
             style={{ flex: 1 }}
           />
           <AppButton
-            title="Pick from Gallery"
+            title="Gallery"
+            icon="images-outline"
             variant="secondary"
             onPress={() => capturePhoto(false)}
             style={{ flex: 1 }}
           />
         </View>
         {photoUri && (
-          <Image source={{ uri: photoUri }} style={styles.previewImg} resizeMode="cover" />
+          <View style={styles.previewWrap}>
+            <Image source={{ uri: photoUri }} style={styles.previewImg} resizeMode="cover" />
+            <TouchableOpacity
+              style={styles.removeBadge}
+              onPress={() => {
+                setPhotoUri(null);
+                setPhotoMimeType(null);
+              }}
+            >
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>3. Voice Note (Hindi, English, or Hinglish)</Text>
-        <AppButton
-          title={
-            recording
-              ? `Stop Recording (${recordingSeconds}s)`
-              : audioUri
-                ? 'Re-record Voice Note'
-                : 'Start Recording'
-          }
-          variant={recording ? 'danger' : 'primary'}
-          onPress={toggleRecording}
-        />
+      <SectionCard
+        title="3. Voice Note"
+        subtitle="Speak in Hindi, English, or Hinglish"
+        icon="mic-outline"
+      >
+        <View style={[styles.recorderBox, recording && styles.recorderBoxActive]}>
+          <View style={styles.recorderInfo}>
+            <Ionicons
+              name={recording ? 'radio-button-on' : audioUri ? 'checkmark-circle' : 'mic'}
+              size={22}
+              color={
+                recording ? COLORS.danger : audioUri ? COLORS.success : COLORS.primary
+              }
+            />
+            <Text style={styles.recorderStatus}>
+              {recording
+                ? `Recording voice note... ${recordingSeconds}s`
+                : audioUri
+                  ? 'Voice note saved locally'
+                  : 'Tap below to record a short note'}
+            </Text>
+          </View>
+          <AppButton
+            title={
+              recording
+                ? 'Stop Recording'
+                : audioUri
+                  ? 'Re-record Voice Note'
+                  : 'Start Recording'
+            }
+            icon={recording ? 'stop-circle-outline' : 'mic-outline'}
+            variant={recording ? 'danger' : 'primary'}
+            onPress={toggleRecording}
+          />
+        </View>
         {audioUri && !recording && (
           <View style={{ marginTop: 10 }}>
             <AudioPlaybackButton uri={audioUri} label="Play Recorded Voice Note" />
           </View>
         )}
-      </View>
+      </SectionCard>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>4. Generate Report</Text>
+      <SectionCard
+        title="4. Create Report"
+        subtitle="Let Gemini draft the English ticket or edit manually"
+        icon="sparkles-outline"
+      >
         <AppButton
           title={isOnline ? 'Generate AI Draft & Review' : 'Save Draft & Queue AI'}
+          icon={isOnline ? 'sparkles' : 'cloud-offline-outline'}
           onPress={handleGenerateAiOrQueue}
           loading={busy}
           disabled={Boolean(recording)}
         />
         <AppButton
           title="Continue Manually (Skip AI)"
+          icon="create-outline"
           variant="secondary"
           onPress={handleManualContinue}
           disabled={busy || Boolean(recording)}
           style={{ marginTop: 10 }}
         />
-      </View>
+      </SectionCard>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f4f6f9' },
+  root: { flex: 1, backgroundColor: COLORS.canvas },
   container: { padding: 14, gap: 14, paddingBottom: 32 },
-  offlineBanner: { backgroundColor: '#fef3c7', padding: 10, borderRadius: 8 },
-  offlineText: { color: '#92400e', fontSize: 13, fontWeight: '600' },
-  errorBox: { backgroundColor: '#fee2e2', padding: 10, borderRadius: 8 },
-  errorText: { color: '#b91c1c', fontSize: 13 },
-  infoBox: { backgroundColor: '#dbeafe', padding: 10, borderRadius: 8 },
-  infoText: { color: '#1e40af', fontSize: 13 },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  progressBarCard: {
+    backgroundColor: COLORS.navy,
+    borderRadius: 12,
+    padding: 13,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
-  label: { fontSize: 13, fontWeight: '600', color: '#475569', marginTop: 8, marginBottom: 6 },
-  muted: { color: '#64748b', fontSize: 13 },
-  pillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  progressTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  progressCount: { color: '#93C5FD', fontSize: 12, fontWeight: '700' },
+  progressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: COLORS.navyLight,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#3B82F6',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.amberSoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  offlineText: { flex: 1, color: '#92400E', fontSize: 13, fontWeight: '600' },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.dangerSoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  errorText: { flex: 1, color: COLORS.danger, fontSize: 13, fontWeight: '500' },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginTop: 6,
+    marginBottom: 7,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  muted: { color: COLORS.textMuted, fontSize: 13 },
+  pillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   pickPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: '#ffffff',
+    borderColor: COLORS.borderStrong,
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surfaceMuted,
   },
   pickPillActive: {
-    backgroundColor: '#1d4ed8',
-    borderColor: '#1d4ed8',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  pickText: { fontSize: 13, color: '#1e293b', fontWeight: '500' },
-  pickTextActive: { color: '#ffffff', fontWeight: '600' },
-  previewImg: { width: '100%', height: 190, borderRadius: 8, marginTop: 12 },
+  pickText: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
+  pickTextActive: { color: '#FFFFFF' },
+  previewWrap: { position: 'relative', marginTop: 12 },
+  previewImg: { width: '100%', height: 200, borderRadius: 10 },
+  removeBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recorderBox: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  recorderBoxActive: {
+    borderColor: COLORS.danger,
+    backgroundColor: '#FEF2F2',
+  },
+  recorderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recorderStatus: { fontSize: 13, fontWeight: '600', color: COLORS.text },
 });

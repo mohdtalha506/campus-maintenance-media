@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { mobileApi } from '../../../src/api/mobileApi';
-import { AppButton } from '../../../src/components/UiPrimitives';
+import { AppButton, SectionCard } from '../../../src/components/UiPrimitives';
+import { COLORS } from '../../../src/theme/tokens';
 
 export default function SubmitRepairScreen() {
   const { id, version } = useLocalSearchParams<{ id: string; version?: string }>();
@@ -84,31 +86,36 @@ export default function SubmitRepairScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       {error && (
         <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>After-Repair Photo (Required)</Text>
+      <SectionCard
+        title="After-Repair Photo"
+        subtitle="Required proof before supervisor verification"
+        icon="camera-outline"
+      >
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <AppButton
             title="Take Photo"
-            variant="secondary"
+            icon="camera"
+            variant="soft"
             onPress={() => pickPhoto(true)}
             style={{ flex: 1 }}
           />
           <AppButton
-            title="Choose Photo"
+            title="Gallery"
+            icon="images-outline"
             variant="secondary"
             onPress={() => pickPhoto(false)}
             style={{ flex: 1 }}
           />
         </View>
         {photoUri && <Image source={{ uri: photoUri }} style={styles.img} resizeMode="cover" />}
-      </View>
+      </SectionCard>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Completion Note</Text>
+      <SectionCard title="Completion Note" icon="create-outline">
         <TextInput
           style={styles.textarea}
           multiline
@@ -116,10 +123,11 @@ export default function SubmitRepairScreen() {
           onChangeText={setCompletionNote}
           placeholder="Describe the repair performed and verification checks..."
         />
-      </View>
+      </SectionCard>
 
       <AppButton
         title="Submit Repair for Verification"
+        icon="shield-checkmark-outline"
         variant="success"
         onPress={handleSubmit}
         loading={busy}
@@ -129,27 +137,27 @@ export default function SubmitRepairScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f4f6f9' },
+  root: { flex: 1, backgroundColor: COLORS.canvas },
   container: { padding: 14, gap: 12, paddingBottom: 32 },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 10,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  img: { width: '100%', height: 210, borderRadius: 8 },
+  img: { width: '100%', height: 210, borderRadius: 10, marginTop: 12 },
   textarea: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderColor: COLORS.borderStrong,
+    borderRadius: 10,
     padding: 12,
-    minHeight: 100,
+    minHeight: 106,
     textAlignVertical: 'top',
     fontSize: 15,
+    backgroundColor: COLORS.surfaceMuted,
+    color: COLORS.text,
   },
-  errorBox: { backgroundColor: '#fee2e2', padding: 10, borderRadius: 8 },
-  errorText: { color: '#b91c1c', fontSize: 13 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.dangerSoft,
+    padding: 11,
+    borderRadius: 10,
+  },
+  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
 });

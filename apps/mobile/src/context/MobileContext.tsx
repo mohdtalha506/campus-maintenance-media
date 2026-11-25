@@ -134,7 +134,10 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     (async () => {
       const override = await loadApiBaseUrlOverride();
-      if (override) {
+      const isProdBuild = typeof __DEV__ === 'undefined' || !__DEV__;
+      if (override && isProdBuild && override.includes('10.0.2.2')) {
+        await saveApiBaseUrlOverride('');
+      } else if (override) {
         setMobileApiBaseUrl(override);
         if (mounted) setApiBaseUrlState(getMobileApiBaseUrl());
       }
@@ -143,7 +146,15 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
       if (session && mounted) {
         setMobileAuthToken(session.token);
         setUser(session.user);
-        await refreshLocations();
+        try {
+          const cached = await getCachedLocations();
+          if (cached.buildings.length > 0 && mounted) {
+            setBuildings(cached.buildings);
+            setRooms(cached.rooms);
+          }
+        } catch {
+          // ignore empty initial cache
+        }
         if (session.user.role === 'reporter') {
           await refreshDraftsForUser(session.user.id);
         }
@@ -157,6 +168,7 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
         setAuthLoading(false);
       }
       if (onlineNow && session) {
+        void refreshLocations();
         void runSyncForUser(session.user);
       }
     })();

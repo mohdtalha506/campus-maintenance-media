@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useMobile } from '../../src/context/MobileContext';
+import { COLORS } from '../../src/theme/tokens';
 
 export default function ReporterLayout() {
   const { isOnline, signOut, drafts } = useMobile();
@@ -9,26 +11,46 @@ export default function ReporterLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#0f172a' },
-        headerTintColor: '#ffffff',
-        tabBarActiveTintColor: '#1d4ed8',
+        headerStyle: { backgroundColor: COLORS.navy },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: { fontWeight: '700', fontSize: 17 },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarStyle: {
+          height: 62,
+          paddingTop: 6,
+          paddingBottom: 8,
+          borderTopColor: COLORS.border,
+          backgroundColor: COLORS.surface,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+        },
         headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 12 }}>
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 999,
-                backgroundColor: isOnline ? '#dcfce7' : '#fee2e2',
-                color: isOnline ? '#15803d' : '#b91c1c',
-              }}
+          <View style={styles.headerRight}>
+            <View
+              style={[
+                styles.connPill,
+                { backgroundColor: isOnline ? COLORS.successSoft : COLORS.dangerSoft },
+              ]}
             >
-              {isOnline ? 'Online' : 'Offline'}
-            </Text>
-            <TouchableOpacity onPress={signOut}>
-              <Text style={{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }}>Sign Out</Text>
+              <Ionicons
+                name={isOnline ? 'wifi' : 'cloud-offline'}
+                size={12}
+                color={isOnline ? COLORS.success : COLORS.danger}
+              />
+              <Text
+                style={[
+                  styles.connText,
+                  { color: isOnline ? COLORS.success : COLORS.danger },
+                ]}
+              >
+                {isOnline ? 'Online' : 'Offline'}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={signOut} style={styles.logoutBtn} accessibilityLabel="Sign out">
+              <Ionicons name="log-out-outline" size={20} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
         ),
@@ -39,20 +61,42 @@ export default function ReporterLayout() {
         options={{
           title: 'My Reports',
           tabBarLabel: 'My Reports',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'document-text' : 'document-text-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="new"
         options={{
-          title: 'New Report',
-          tabBarLabel: 'New Report',
+          title: 'New Inspection',
+          tabBarLabel: 'Report Issue',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'add-circle' : 'add-circle-outline'}
+              size={size + 2}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="queue"
         options={{
-          title: 'Drafts & Queue',
-          tabBarLabel: pendingCount > 0 ? `Queue (${pendingCount})` : 'Queue',
+          title: 'Drafts & Sync Queue',
+          tabBarLabel: 'Queue',
+          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? 'cloud-upload' : 'cloud-upload-outline'}
+              size={size}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -72,3 +116,27 @@ export default function ReporterLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginRight: 12,
+  },
+  connPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  connText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  logoutBtn: {
+    padding: 4,
+  },
+});
