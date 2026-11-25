@@ -24,11 +24,6 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
@@ -58,21 +53,13 @@
         "projectId": "b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     },
     "owner": "mohdtalha506",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1"
-    },
     "ios": {}
   }
 }
