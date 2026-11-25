@@ -15,7 +15,6 @@
     },
     "android": {
       "package": "edu.campus.maintenancecopilot",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F172A"
