@@ -48,6 +48,12 @@
         "projectId": "b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1"
       }
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b4259d9f-14fa-4a79-a5e9-dfb2121bc5e1"
+    },
     "owner": "mohdtalha506",
     "runtimeVersion": {
       "policy": "appVersion"
