@@ -11,7 +11,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
+export interface PushRegistrationResult {
+  token: string | null;
+  status: 'active' | 'denied' | 'unsupported' | 'error';
+  message: string;
+}
+
+export async function registerForPushNotificationsAsync(): Promise<PushRegistrationResult> {
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -23,7 +29,11 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     }
 
     if (!Device.isDevice) {
-      return null;
+      return {
+        token: null,
+        status: 'unsupported',
+        message: 'Physical device required for push notifications.',
+      };
     }
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -33,20 +43,36 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      return null;
+      return {
+        token: null,
+        status: 'denied',
+        message: 'Notification permission denied. Enable it in phone Settings.',
+      };
     }
 
     const projectId =
       (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
       Constants.easConfig?.projectId;
     if (!projectId) {
-      return null;
+      return {
+        token: null,
+        status: 'error',
+        message: 'Missing EAS projectId in app config.',
+      };
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    return tokenData.data;
-  } catch {
-    return null;
+    return {
+      token: tokenData.data,
+      status: 'active',
+      message: 'Push notifications active',
+    };
+  } catch (err) {
+    return {
+      token: null,
+      status: 'error',
+      message: err instanceof Error ? err.message : 'Could not register push token.',
+    };
   }
 }
 

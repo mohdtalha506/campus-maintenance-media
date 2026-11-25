@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "586363927121",
+    "project_id": "campus-maintenance-506",
+    "storage_bucket": "campus-maintenance-506.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:586363927121:android:c2e45ec9caa87c9ce81670",
+        "android_client_info": {
+          "package_name": "edu.campus.maintenancecopilot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaOPSB5EM-UTSQJ3SyU0J0zSBJsJCL8Vc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

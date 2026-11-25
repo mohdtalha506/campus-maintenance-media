@@ -63,6 +63,7 @@ interface MobileContextValue {
   drafts: LocalDraftRecord[];
   notifications: NotificationDTO[];
   unreadCount: number;
+  pushStatusMessage: string | null;
   aiReadyBanner: string | null;
   themeMode: ThemeMode;
   isDark: boolean;
@@ -101,6 +102,7 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   const [drafts, setDrafts] = useState<LocalDraftRecord[]>([]);
   const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pushStatusMessage, setPushStatusMessage] = useState<string | null>(null);
   const [aiReadyBanner, setAiReadyBanner] = useState<string | null>(null);
 
   const isDark = themeMode === 'system' ? systemScheme === 'dark' : themeMode === 'dark';
@@ -158,14 +160,17 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const registerDevicePushToken = useCallback(async () => {
-    const token = await registerForPushNotificationsAsync();
-    if (!token) return;
-    pushTokenRef.current = token;
+    const result = await registerForPushNotificationsAsync();
+    setPushStatusMessage(result.message);
+    if (!result.token) return;
+    pushTokenRef.current = result.token;
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
     try {
-      await mobileApi.registerPushToken(token, platform);
-    } catch {
-      // ignore transient network errors
+      await mobileApi.registerPushToken(result.token, platform);
+    } catch (err) {
+      setPushStatusMessage(
+        err instanceof Error ? `Server sync failed: ${err.message}` : 'Server sync failed.'
+      );
     }
   }, []);
 
@@ -416,6 +421,7 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
         drafts,
         notifications,
         unreadCount,
+        pushStatusMessage,
         aiReadyBanner,
         themeMode,
         isDark,

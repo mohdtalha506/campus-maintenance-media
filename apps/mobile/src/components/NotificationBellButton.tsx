@@ -13,8 +13,14 @@ import { useMobile, useTheme } from '../context/MobileContext';
 import type { ThemeColors } from '../theme/tokens';
 
 export function NotificationBellButton() {
-  const { user, notifications, unreadCount, markNotificationRead, markAllNotificationsRead } =
-    useMobile();
+  const {
+    user,
+    notifications,
+    unreadCount,
+    pushStatusMessage,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useMobile();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
@@ -68,6 +74,13 @@ export function NotificationBellButton() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {pushStatusMessage && (
+              <View style={styles.statusStrip}>
+                <Ionicons name="radio-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.statusStripText}>{pushStatusMessage}</Text>
+              </View>
+            )}
 
             <FlatList
               data={notifications}
@@ -177,6 +190,17 @@ function createStyles(colors: ThemeColors) {
     unreadPillText: { fontSize: 11.5, fontWeight: '700', color: colors.primaryText },
     markAllText: { fontSize: 12.5, fontWeight: '700', color: colors.primaryText },
     closeBtn: { padding: 4 },
+    statusStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: colors.surfaceMuted,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    statusStripText: { fontSize: 11.5, color: colors.textSecondary, flex: 1 },
     empty: { padding: 40, alignItems: 'center', gap: 8 },
     emptyText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
     notifCard: {
