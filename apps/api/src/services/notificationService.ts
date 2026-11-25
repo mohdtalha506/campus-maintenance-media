@@ -88,25 +88,38 @@ async function sendExpoPushMessages(
     data: Record<string, unknown>;
   }>
 ): Promise<unknown> {
-  if (messages.length === 0 || typeof fetch !== 'function') return null;
+  if (messages.length === 0) return { status: 0, ok: false, error: 'no messages' };
+  if (typeof fetch !== 'function') {
+    return { status: 0, ok: false, error: 'fetch is not a function' };
+  }
   try {
     const res = await fetch('https://exp.pushservice.com/api/v2/push/send', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(messages),
     });
-    const json = await res.json().catch(() => null);
+    const rawText = await res.text();
+    let json: unknown = null;
+    try {
+      json = JSON.parse(rawText);
+    } catch {
+      json = rawText;
+    }
     if (!res.ok) {
       console.error('Expo push HTTP error:', res.status, json);
     }
-    return json;
+    return { status: res.status, ok: res.ok, body: json };
   } catch (err) {
     console.error('Expo push network error:', err);
-    return null;
+    return {
+      status: 0,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+      hasFetch: typeof fetch === 'function',
+    };
   }
 }
 
