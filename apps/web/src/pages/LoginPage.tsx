@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export function LoginPage() {
   const { user, login } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [email, setEmail] = useState('supervisor@campus.edu');
   const [password, setPassword] = useState('Password123!');
   const [submitting, setSubmitting] = useState(false);
@@ -29,10 +31,23 @@ export function LoginPage() {
   return (
     <div className="login-wrapper">
       <div className="login-card">
-        <h1 style={{ margin: 0, fontSize: 22 }}>Campus Maintenance Copilot</h1>
-        <p style={{ margin: '6px 0 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
-          Supervisor Operations Dashboard
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22 }}>Campus Maintenance Copilot</h1>
+            <p style={{ margin: '6px 0 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
+              Supervisor Operations Dashboard
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{ padding: '6px 10px', flexShrink: 0 }}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 

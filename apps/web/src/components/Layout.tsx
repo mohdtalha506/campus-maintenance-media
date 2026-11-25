@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -38,6 +40,9 @@ export function Layout() {
             <strong>{user?.name}</strong>
             <span>{user?.email}</span>
           </div>
+          <button type="button" className="btn btn-ghost" onClick={toggleTheme}>
+            {isDark ? '☀️ Light Mode' : '🌙 Night Mode'}
+          </button>
           <button type="button" className="btn btn-ghost" onClick={logout}>
             Sign out
           </button>
@@ -47,13 +52,24 @@ export function Layout() {
       <div className="main-content">
         <header className="mobile-header">
           <strong>Campus Copilot</strong>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => setMenuOpen((prev) => !prev)}
-          >
-            {menuOpen ? 'Close' : 'Menu'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{ padding: '6px 10px' }}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setMenuOpen((prev) => !prev)}
+            >
+              {menuOpen ? 'Close' : 'Menu'}
+            </button>
+          </div>
         </header>
         <main className="page-container">
           <Outlet />
