@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import {
   Stack,
   useRootNavigationState,
@@ -79,6 +80,21 @@ function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as
+        | { ticketId?: string }
+        | undefined;
+      if (!data?.ticketId || !user) return;
+      if (user.role === 'technician') {
+        router.push(`/(technician)/job/${data.ticketId}`);
+      } else if (user.role === 'reporter') {
+        router.push(`/(reporter)/ticket/${data.ticketId}`);
+      }
+    });
+    return () => sub.remove();
+  }, [router, user]);
 
   useEffect(() => {
     if (authLoading || !navigationState?.key) return;

@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { NotificationBellButton } from '../../src/components/NotificationBellButton';
 import { ThemeToggleButton } from '../../src/components/UiPrimitives';
 import { useMobile, useTheme } from '../../src/context/MobileContext';
 
@@ -16,6 +17,7 @@ export default function TechnicianLayout() {
         headerTitleStyle: { fontWeight: '700', fontSize: 17 },
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <NotificationBellButton />
             <ThemeToggleButton />
             <TouchableOpacity onPress={signOut} style={{ padding: 4 }} accessibilityLabel="Sign out">
               <Ionicons name="log-out-outline" size={20} color="#CBD5E1" />

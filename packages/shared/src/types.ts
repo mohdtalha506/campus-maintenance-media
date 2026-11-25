@@ -135,3 +135,20 @@ export interface LoginResponseDTO {
   user: UserSummaryDTO;
   token?: string;
 }
+
+export interface NotificationDTO {
+  id: string;
+  userId: string;
+  ticketId: string | null;
+  ticketNumber: string | null;
+  title: string;
+  body: string;
+  eventType: TicketEventType;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponseDTO {
+  items: NotificationDTO[];
+  unreadCount: number;
+}

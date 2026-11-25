@@ -3,6 +3,7 @@ import type {
   AiDraftDTO,
   BuildingDTO,
   LoginResponseDTO,
+  NotificationListResponseDTO,
   PaginatedTicketsResponse,
   RoomDTO,
   TicketDetailDTO,
@@ -212,4 +213,28 @@ export const mobileApi = {
       body: form,
     });
   },
+
+  listNotifications: () => apiRequest<NotificationListResponseDTO>('/api/notifications'),
+
+  markNotificationRead: (id: string) =>
+    apiRequest<{ unreadCount: number }>(`/api/notifications/${id}/read`, {
+      method: 'POST',
+    }),
+
+  markAllNotificationsRead: () =>
+    apiRequest<{ unreadCount: number }>('/api/notifications/read-all', {
+      method: 'POST',
+    }),
+
+  registerPushToken: (token: string, platform: 'android' | 'ios' | 'web' = 'android') =>
+    apiRequest<{ ok: boolean }>('/api/notifications/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    }),
+
+  unregisterPushToken: (token: string) =>
+    apiRequest<{ ok: boolean }>('/api/notifications/push-token', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    }),
 };

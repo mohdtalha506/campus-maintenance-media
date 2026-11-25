@@ -2,6 +2,7 @@ import type {
   BuildingDTO,
   DashboardSummaryDTO,
   LoginResponseDTO,
+  NotificationListResponseDTO,
   PaginatedTicketsResponse,
   RoomDTO,
   TicketDetailDTO,
@@ -152,4 +153,12 @@ export const webApi = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+
+  listNotifications: () => request<NotificationListResponseDTO>('/api/notifications'),
+
+  markNotificationRead: (id: string) =>
+    request<{ unreadCount: number }>(`/api/notifications/${id}/read`, { method: 'POST' }),
+
+  markAllNotificationsRead: () =>
+    request<{ unreadCount: number }>('/api/notifications/read-all', { method: 'POST' }),
 };

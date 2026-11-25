@@ -18,6 +18,7 @@ import {
 } from '../middleware/upload.js';
 import { AttachmentModel } from '../models/Attachment.js';
 import { TicketModel } from '../models/Ticket.js';
+import { getActiveSupervisorIds, notifyUsers } from '../services/notificationService.js';
 import {
   assignTicket,
   canUserAccessTicket,
@@ -110,6 +111,20 @@ ticketRouter.post(
       voiceNote,
     });
 
+    if (!result.idempotentReplay) {
+      const supIds = await getActiveSupervisorIds();
+      const t = result.ticket;
+      void notifyUsers({
+        userIds: supIds,
+        excludeUserId: req.user!.id,
+        ticketId: t.id,
+        ticketNumber: t.ticketNumber,
+        title: `New Issue ${t.ticketNumber}`,
+        body: `${t.title} · ${t.building.name} Rm ${t.room.roomNumber}`,
+        eventType: 'created',
+      });
+    }
+
     res.status(result.idempotentReplay ? 200 : 201).json(result);
   })
 );
@@ -140,6 +155,17 @@ ticketRouter.patch(
       priority: body.priority,
       expectedVersion: body.expectedVersion,
     });
+
+    void notifyUsers({
+      userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
+      excludeUserId: req.user!.id,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: `Assigned: ${ticket.ticketNumber}`,
+      body: `${ticket.title} · ${ticket.building.name} Rm ${ticket.room.roomNumber}`,
+      eventType: 'assigned',
+    });
+
     res.json({ ticket });
   })
 );
@@ -171,6 +197,18 @@ ticketRouter.post(
       actor: req.user!,
       expectedVersion: body.expectedVersion,
     });
+
+    const supIds = await getActiveSupervisorIds();
+    void notifyUsers({
+      userIds: [ticket.reporter.id, ...supIds],
+      excludeUserId: req.user!.id,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: `Work Started: ${ticket.ticketNumber}`,
+      body: `${req.user!.name} started repair on "${ticket.title}"`,
+      eventType: 'work_started',
+    });
+
     res.json({ ticket });
   })
 );
@@ -198,6 +236,18 @@ ticketRouter.post(
       expectedVersion: body.expectedVersion,
       afterPhoto: req.file,
     });
+
+    const supIds = await getActiveSupervisorIds();
+    void notifyUsers({
+      userIds: [ticket.reporter.id, ...supIds],
+      excludeUserId: req.user!.id,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: `Repair Ready: ${ticket.ticketNumber}`,
+      body: `${req.user!.name} submitted repair proof for verification`,
+      eventType: 'repair_submitted',
+    });
+
     res.json({ ticket });
   })
 );
@@ -214,6 +264,17 @@ ticketRouter.post(
       verificationNote: body.verificationNote,
       expectedVersion: body.expectedVersion,
     });
+
+    void notifyUsers({
+      userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
+      excludeUserId: req.user!.id,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: `Closed: ${ticket.ticketNumber}`,
+      body: `"${ticket.title}" has been verified and closed`,
+      eventType: 'closed',
+    });
+
     res.json({ ticket });
   })
 );
@@ -230,6 +291,17 @@ ticketRouter.post(
       reason: body.reason,
       expectedVersion: body.expectedVersion,
     });
+
+    void notifyUsers({
+      userIds: [ticket.reporter.id, ...(ticket.assignee ? [ticket.assignee.id] : [])],
+      excludeUserId: req.user!.id,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: `Reopened: ${ticket.ticketNumber}`,
+      body: `Reason: ${body.reason}`,
+      eventType: 'reopened',
+    });
+
     res.json({ ticket });
   })
 );

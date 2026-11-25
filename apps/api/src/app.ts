@@ -8,6 +8,7 @@ import { aiRouter } from './routes/aiRoutes.js';
 import { authRouter } from './routes/authRoutes.js';
 import { locationRouter } from './routes/locationRoutes.js';
 import { mediaRouter } from './routes/mediaRoutes.js';
+import { notificationRouter } from './routes/notificationRoutes.js';
 import { ticketRouter } from './routes/ticketRoutes.js';
 import { userRouter } from './routes/userRoutes.js';
 
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/api/ai', aiRouter);
   app.use('/api/tickets', ticketRouter);
   app.use('/api/media', mediaRouter);
+  app.use('/api/notifications', notificationRouter);
 
   app.use(errorHandler);
   return app;

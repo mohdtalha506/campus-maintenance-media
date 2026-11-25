@@ -7,9 +7,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, Platform, useColorScheme } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import NetInfo from '@react-native-community/netinfo';
-import type { BuildingDTO, RoomDTO, UserSummaryDTO } from '@campus/shared';
+import type { BuildingDTO, NotificationDTO, RoomDTO, UserSummaryDTO } from '@campus/shared';
+import {
+  registerForPushNotificationsAsync,
+  syncAppIconBadgeCount,
+} from '../services/notificationService';
 import {
   getMobileApiBaseUrl,
   mobileApi,
@@ -56,6 +61,8 @@ interface MobileContextValue {
   buildings: BuildingDTO[];
   rooms: RoomDTO[];
   drafts: LocalDraftRecord[];
+  notifications: NotificationDTO[];
+  unreadCount: number;
   aiReadyBanner: string | null;
   themeMode: ThemeMode;
   isDark: boolean;
@@ -65,6 +72,9 @@ interface MobileContextValue {
   categoryStyle: CategoryStyleMap;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   toggleTheme: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   dismissAiReadyBanner: () => void;
   updateApiBaseUrl: (url: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<UserSummaryDTO>;
@@ -89,6 +99,8 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   const [buildings, setBuildings] = useState<BuildingDTO[]>([]);
   const [rooms, setRooms] = useState<RoomDTO[]>([]);
   const [drafts, setDrafts] = useState<LocalDraftRecord[]>([]);
+  const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [aiReadyBanner, setAiReadyBanner] = useState<string | null>(null);
 
   const isDark = themeMode === 'system' ? systemScheme === 'dark' : themeMode === 'dark';
@@ -110,6 +122,52 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
 
   const syncLockRef = useRef(false);
   const wasOnlineRef = useRef(true);
+  const pushTokenRef = useRef<string | null>(null);
+
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const res = await mobileApi.listNotifications();
+      setNotifications(res.items);
+      setUnreadCount(res.unreadCount);
+      await syncAppIconBadgeCount(res.unreadCount);
+    } catch {
+      // ignore offline or unauthenticated
+    }
+  }, []);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    try {
+      const res = await mobileApi.markNotificationRead(id);
+      setUnreadCount(res.unreadCount);
+      await syncAppIconBadgeCount(res.unreadCount);
+    } catch {
+      // ignore offline
+    }
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+    await syncAppIconBadgeCount(0);
+    try {
+      await mobileApi.markAllNotificationsRead();
+    } catch {
+      // ignore offline
+    }
+  }, []);
+
+  const registerDevicePushToken = useCallback(async () => {
+    const token = await registerForPushNotificationsAsync();
+    if (!token) return;
+    pushTokenRef.current = token;
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    try {
+      await mobileApi.registerPushToken(token, platform);
+    } catch {
+      // ignore transient network errors
+    }
+  }, []);
 
   const refreshDraftsForUser = useCallback(async (reporterId: string) => {
     const list = await listDraftsForReporter(reporterId);
@@ -216,6 +274,8 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
       }
       if (onlineNow && session) {
         void refreshLocations();
+        void refreshNotifications();
+        void registerDevicePushToken();
         void runSyncForUser(session.user);
       }
     })();
@@ -223,7 +283,29 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [refreshDraftsForUser, refreshLocations, runSyncForUser]);
+  }, [
+    refreshDraftsForUser,
+    refreshLocations,
+    refreshNotifications,
+    registerDevicePushToken,
+    runSyncForUser,
+  ]);
+
+  useEffect(() => {
+    if (!user) return;
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      void refreshNotifications();
+    });
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void refreshNotifications();
+      }
+    });
+    return () => {
+      sub.remove();
+      appStateSub.remove();
+    };
+  }, [refreshNotifications, user]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -254,20 +336,39 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
       await saveSecureSession({ token: res.token, user: res.user });
       setUser(res.user);
       await refreshLocations();
+      void refreshNotifications();
+      void registerDevicePushToken();
       if (res.user.role === 'reporter') {
         await refreshDraftsForUser(res.user.id);
         void runSyncForUser(res.user);
       }
       return res.user;
     },
-    [refreshDraftsForUser, refreshLocations, runSyncForUser]
+    [
+      refreshDraftsForUser,
+      refreshLocations,
+      refreshNotifications,
+      registerDevicePushToken,
+      runSyncForUser,
+    ]
   );
 
   const signOut = useCallback(async () => {
+    if (pushTokenRef.current) {
+      try {
+        await mobileApi.unregisterPushToken(pushTokenRef.current);
+      } catch {
+        // ignore network errors on logout
+      }
+      pushTokenRef.current = null;
+    }
     setMobileAuthToken(null);
     await clearSecureSession();
     setUser(null);
     setDrafts([]);
+    setNotifications([]);
+    setUnreadCount(0);
+    await syncAppIconBadgeCount(0);
   }, []);
 
   const refreshDrafts = useCallback(async () => {
@@ -313,6 +414,8 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
         buildings,
         rooms,
         drafts,
+        notifications,
+        unreadCount,
         aiReadyBanner,
         themeMode,
         isDark,
@@ -322,6 +425,9 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
         categoryStyle,
         setThemeMode,
         toggleTheme,
+        refreshNotifications,
+        markNotificationRead,
+        markAllNotificationsRead,
         dismissAiReadyBanner: () => setAiReadyBanner(null),
         updateApiBaseUrl,
         signIn,

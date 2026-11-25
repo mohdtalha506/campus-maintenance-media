@@ -576,6 +576,72 @@ textarea {
   box-shadow: var(--shadow-md);
 }
 
+.notif-count-pill {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.notif-drawer {
+  margin: 14px 28px 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.notif-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notif-item {
+  text-align: left;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.notif-item.unread {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.notif-item-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.notif-item-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.notif-item-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
 @media (max-width: 900px) {
   .sidebar {
     display: none;
