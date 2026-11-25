@@ -23,6 +23,12 @@ import { persistDraftMedia } from '../../src/storage/mediaFiles';
 import type { ThemeColors } from '../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../src/types/draft';
 
+function formatTimer(totalSec: number): string {
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 export default function NewReportScreen() {
   const { user, buildings, rooms, isOnline, saveDraft } = useMobile();
   const { colors } = useTheme();
@@ -266,238 +272,344 @@ export default function NewReportScreen() {
     }
   }
 
-  const completedSteps = [
-    Boolean(selectedBuildingId && selectedRoomId),
-    Boolean(photoUri),
-    Boolean(audioUri),
-  ].filter(Boolean).length;
+  const hasLocation = Boolean(selectedBuildingId && selectedRoomId);
+  const hasPhoto = Boolean(photoUri);
+  const hasAudio = Boolean(audioUri);
+  const completedSteps = [hasLocation, hasPhoto, hasAudio].filter(Boolean).length;
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.container}>
-      <View style={styles.progressBarCard}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>Inspection Checklist</Text>
-          <Text style={styles.progressCount}>{completedSteps}/3 captured</Text>
+    <View style={styles.root}>
+      <View style={styles.heroStrip}>
+        <View style={styles.heroTopRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTitle}>Field Inspection</Text>
+            <Text style={styles.heroSub}>Capture location, photo &amp; voice note</Text>
+          </View>
+          <View style={styles.stepCountPill}>
+            <Text style={styles.stepCountText}>{completedSteps}/3 Ready</Text>
+          </View>
         </View>
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${Math.max(15, (completedSteps / 3) * 100)}%` },
-            ]}
-          />
+
+        <View style={styles.stepperRow}>
+          {[
+            { label: 'Location', done: hasLocation, icon: 'business-outline' },
+            { label: 'Photo', done: hasPhoto, icon: 'camera-outline' },
+            { label: 'Voice', done: hasAudio, icon: 'mic-outline' },
+          ].map((step) => (
+            <View
+              key={step.label}
+              style={[styles.stepChip, step.done && styles.stepChipDone]}
+            >
+              <Ionicons
+                name={
+                  (step.done ? 'checkmark-circle' : step.icon) as keyof typeof Ionicons.glyphMap
+                }
+                size={14}
+                color={step.done ? '#4ADE80' : '#94A3B8'}
+              />
+              <Text style={[styles.stepChipText, step.done && styles.stepChipTextDone]}>
+                {step.label}
+              </Text>
+            </View>
+          ))}
         </View>
       </View>
 
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline" size={18} color={colors.amber} />
-          <Text style={styles.offlineText}>
-            Offline mode active: cached campus locations and durable local storage are ready.
-          </Text>
-        </View>
-      )}
-
-      {error && (
-        <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={colors.danger} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      <SectionCard
-        title="1. Campus Location"
-        subtitle="Select building and room"
-        icon="business-outline"
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        {buildings.length === 0 ? (
-          <Text style={styles.muted}>
-            No cached buildings yet. Sign in online once to cache campus locations.
-          </Text>
-        ) : (
-          <>
-            <Text style={styles.label}>Building</Text>
-            <View style={styles.pillGrid}>
-              {buildings.map((b) => {
-                const active = selectedBuildingId === b.id;
-                return (
-                  <TouchableOpacity
-                    key={b.id}
-                    style={[styles.pickPill, active && styles.pickPillActive]}
-                    onPress={() => setSelectedBuildingId(b.id)}
-                  >
-                    <Ionicons
-                      name="business"
-                      size={14}
-                      color={active ? '#FFFFFF' : colors.textSecondary}
-                    />
-                    <Text style={[styles.pickText, active && styles.pickTextActive]}>
-                      {b.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text style={styles.label}>Room</Text>
-            <View style={styles.pillGrid}>
-              {filteredRooms.map((r) => {
-                const active = selectedRoomId === r.id;
-                return (
-                  <TouchableOpacity
-                    key={r.id}
-                    style={[styles.pickPill, active && styles.pickPillActive]}
-                    onPress={() => setSelectedRoomId(r.id)}
-                  >
-                    <Ionicons
-                      name="location"
-                      size={14}
-                      color={active ? '#FFFFFF' : colors.textSecondary}
-                    />
-                    <Text style={[styles.pickText, active && styles.pickTextActive]}>
-                      Room {r.roomNumber} · {r.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        title="2. Issue Photo"
-        subtitle="Capture clear evidence of the problem"
-        icon="camera-outline"
-      >
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <AppButton
-            title="Camera"
-            icon="camera"
-            variant="soft"
-            onPress={() => capturePhoto(true)}
-            style={{ flex: 1 }}
-          />
-          <AppButton
-            title="Gallery"
-            icon="images-outline"
-            variant="secondary"
-            onPress={() => capturePhoto(false)}
-            style={{ flex: 1 }}
-          />
-        </View>
-        {photoUri && (
-          <View style={styles.previewWrap}>
-            <Image source={{ uri: photoUri }} style={styles.previewImg} resizeMode="cover" />
-            <TouchableOpacity
-              style={styles.removeBadge}
-              onPress={() => {
-                setPhotoUri(null);
-                setPhotoMimeType(null);
-              }}
-            >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        title="3. Voice Note"
-        subtitle="Speak in Hindi, English, or Hinglish"
-        icon="mic-outline"
-      >
-        <View style={[styles.recorderBox, recording && styles.recorderBoxActive]}>
-          <View style={styles.recorderInfo}>
-            <Ionicons
-              name={recording ? 'radio-button-on' : audioUri ? 'checkmark-circle' : 'mic'}
-              size={22}
-              color={
-                recording ? colors.danger : audioUri ? colors.success : colors.primary
-              }
-            />
-            <Text style={styles.recorderStatus}>
-              {recording
-                ? `Recording voice note... ${recordingSeconds}s`
-                : audioUri
-                  ? 'Voice note saved locally'
-                  : 'Tap below to record a short note'}
+        {!isOnline && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline" size={18} color={colors.amber} />
+            <Text style={styles.offlineText}>
+              Offline mode: cached locations &amp; local SQLite queue are active.
             </Text>
           </View>
-          <AppButton
-            title={
-              recording
-                ? 'Stop Recording'
-                : audioUri
-                  ? 'Re-record Voice Note'
-                  : 'Start Recording'
-            }
-            icon={recording ? 'stop-circle-outline' : 'mic-outline'}
-            variant={recording ? 'danger' : 'primary'}
-            onPress={toggleRecording}
-          />
-        </View>
-        {audioUri && !recording && (
-          <View style={{ marginTop: 10 }}>
-            <AudioPlaybackButton uri={audioUri} label="Play Recorded Voice Note" />
+        )}
+
+        {error && (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-      </SectionCard>
 
-      <SectionCard
-        title="4. Create Report"
-        subtitle="Let Gemini draft the English ticket or edit manually"
-        icon="sparkles-outline"
-      >
-        <AppButton
-          title={isOnline ? 'Generate AI Draft & Review' : 'Save Draft & Queue AI'}
-          icon={isOnline ? 'sparkles' : 'cloud-offline-outline'}
-          onPress={handleGenerateAiOrQueue}
-          loading={busy}
-          disabled={Boolean(recording)}
-        />
-        <AppButton
-          title="Continue Manually (Skip AI)"
-          icon="create-outline"
-          variant="secondary"
-          onPress={handleManualContinue}
-          disabled={busy || Boolean(recording)}
-          style={{ marginTop: 10 }}
-        />
-      </SectionCard>
-    </ScrollView>
+        <SectionCard
+          title="Campus Location"
+          subtitle="Choose building and room"
+          icon="location-outline"
+        >
+          {buildings.length === 0 ? (
+            <Text style={styles.muted}>
+              No cached buildings yet. Sign in online once to cache campus locations.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.label}>Building</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hScrollRow}
+              >
+                {buildings.map((b) => {
+                  const active = selectedBuildingId === b.id;
+                  return (
+                    <TouchableOpacity
+                      key={b.id}
+                      activeOpacity={0.8}
+                      style={[styles.buildingChip, active && styles.buildingChipActive]}
+                      onPress={() => setSelectedBuildingId(b.id)}
+                    >
+                      <Ionicons
+                        name={active ? 'business' : 'business-outline'}
+                        size={15}
+                        color={active ? '#FFFFFF' : colors.primaryText}
+                      />
+                      <Text style={[styles.buildingChipText, active && styles.buildingChipTextActive]}>
+                        {b.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <Text style={[styles.label, { marginTop: 14 }]}>Room</Text>
+              <View style={styles.roomGrid}>
+                {filteredRooms.map((r) => {
+                  const active = selectedRoomId === r.id;
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      activeOpacity={0.82}
+                      style={[styles.roomCard, active && styles.roomCardActive]}
+                      onPress={() => setSelectedRoomId(r.id)}
+                    >
+                      <View style={styles.roomCardTop}>
+                        <Text style={[styles.roomNumber, active && styles.roomNumberActive]}>
+                          Room {r.roomNumber}
+                        </Text>
+                        {active && (
+                          <Ionicons name="checkmark-circle" size={16} color={colors.primaryText} />
+                        )}
+                      </View>
+                      <Text style={styles.roomName} numberOfLines={1}>
+                        {r.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Issue Photo"
+          subtitle="Clear visual evidence helps technicians prepare"
+          icon="camera-outline"
+        >
+          {photoUri ? (
+            <View style={styles.previewWrap}>
+              <Image source={{ uri: photoUri }} style={styles.previewImg} resizeMode="cover" />
+              <View style={styles.previewOverlayBar}>
+                <View style={styles.previewTag}>
+                  <Ionicons name="checkmark-circle" size={15} color="#4ADE80" />
+                  <Text style={styles.previewTagText}>Photo attached</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={styles.overlayActionBtn}
+                    onPress={() => capturePhoto(true)}
+                  >
+                    <Ionicons name="camera-outline" size={14} color="#FFFFFF" />
+                    <Text style={styles.overlayActionText}>Retake</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.overlayActionBtn, styles.overlayDangerBtn]}
+                    onPress={() => {
+                      setPhotoUri(null);
+                      setPhotoMimeType(null);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.dropzone}>
+              <View style={styles.dropzoneIconWrap}>
+                <Ionicons name="camera" size={26} color={colors.primaryText} />
+              </View>
+              <Text style={styles.dropzoneTitle}>Add Issue Photo</Text>
+              <Text style={styles.dropzoneSub}>
+                Snap a picture on site or choose from your gallery
+              </Text>
+              <View style={styles.dropzoneBtnRow}>
+                <AppButton
+                  title="Camera"
+                  icon="camera"
+                  variant="primary"
+                  onPress={() => capturePhoto(true)}
+                  style={{ flex: 1 }}
+                />
+                <AppButton
+                  title="Gallery"
+                  icon="images-outline"
+                  variant="secondary"
+                  onPress={() => capturePhoto(false)}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Voice Note"
+          subtitle="Speak naturally in Hindi, English, or Hinglish"
+          icon="mic-outline"
+        >
+          <View style={[styles.studioCard, recording && styles.studioCardRecording]}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={toggleRecording}
+              style={[
+                styles.micCircle,
+                recording
+                  ? styles.micCircleActive
+                  : audioUri
+                    ? styles.micCircleReady
+                    : undefined,
+              ]}
+            >
+              <Ionicons
+                name={recording ? 'stop' : audioUri ? 'mic' : 'mic-outline'}
+                size={26}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1, gap: 3 }}>
+              <View style={styles.studioTitleRow}>
+                <Text style={styles.studioTitle}>
+                  {recording
+                    ? 'Recording live...'
+                    : audioUri
+                      ? 'Voice note captured'
+                      : 'Tap mic to record'}
+                </Text>
+                {(recording || recordingSeconds > 0) && (
+                  <View style={[styles.timerBadge, recording && styles.timerBadgeLive]}>
+                    <Text style={[styles.timerText, recording && { color: '#FFFFFF' }]}>
+                      {formatTimer(recordingSeconds)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.studioSub}>
+                {recording
+                  ? 'Tap the red stop button when finished'
+                  : audioUri
+                    ? 'Tap mic again to re-record, or play below'
+                    : 'Describe the room issue in your own words'}
+              </Text>
+            </View>
+          </View>
+
+          {audioUri && !recording && (
+            <View style={{ marginTop: 12 }}>
+              <AudioPlaybackButton uri={audioUri} label="Play Recorded Voice Note" />
+            </View>
+          )}
+        </SectionCard>
+
+        <View style={styles.ctaCard}>
+          <View style={styles.ctaHeader}>
+            <View style={styles.aiIconBadge}>
+              <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.ctaTitle}>AI Copilot Draft</Text>
+              <Text style={styles.ctaSub}>
+                Auto-translates voice note into an English maintenance ticket
+              </Text>
+            </View>
+          </View>
+
+          <AppButton
+            title={isOnline ? 'Generate AI Draft & Review' : 'Save Draft & Queue AI'}
+            icon={isOnline ? 'sparkles' : 'cloud-offline-outline'}
+            onPress={handleGenerateAiOrQueue}
+            loading={busy}
+            disabled={Boolean(recording)}
+          />
+
+          <TouchableOpacity
+            onPress={handleManualContinue}
+            disabled={busy || Boolean(recording)}
+            style={styles.manualLinkBtn}
+          >
+            <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+            <Text style={styles.manualLinkText}>Skip AI and fill details manually</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.canvas },
-    container: { padding: 14, gap: 14, paddingBottom: 32 },
-    progressBarCard: {
+    heroStrip: {
       backgroundColor: colors.heroBg,
-      borderRadius: 14,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: colors.isDark ? colors.border : 'transparent',
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 14,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      gap: 12,
     },
-    progressHeader: {
+    heroTopRow: {
       flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 8,
+      gap: 10,
     },
-    progressTitle: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' },
-    progressCount: { color: '#93C5FD', fontSize: 12.5, fontWeight: '700' },
-    progressTrack: {
-      height: 6,
-      borderRadius: 999,
+    heroTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+    heroSub: { fontSize: 12.5, color: '#94A3B8', marginTop: 2 },
+    stepCountPill: {
       backgroundColor: colors.navyLight,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+      paddingHorizontal: 11,
+      paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: '#3B82F6',
     },
+    stepCountText: { color: '#93C5FD', fontSize: 12, fontWeight: '700' },
+    stepperRow: { flexDirection: 'row', gap: 8 },
+    stepChip: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: colors.navyLight,
+      borderRadius: 10,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.06)',
+    },
+    stepChipDone: {
+      borderColor: 'rgba(74, 222, 128, 0.35)',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    },
+    stepChipText: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
+    stepChipTextDone: { color: '#DCFCE7' },
+    container: { padding: 14, gap: 14, paddingBottom: 34 },
     offlineBanner: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -517,63 +629,188 @@ function createStyles(colors: ThemeColors) {
     },
     errorText: { flex: 1, color: colors.danger, fontSize: 13.5, fontWeight: '500', lineHeight: 19 },
     label: {
-      fontSize: 12,
+      fontSize: 11.5,
       fontWeight: '700',
-      color: colors.textSecondary,
-      marginTop: 6,
-      marginBottom: 7,
+      color: colors.textMuted,
+      marginBottom: 8,
       textTransform: 'uppercase',
-      letterSpacing: 0.4,
+      letterSpacing: 0.6,
     },
     muted: { color: colors.textMuted, fontSize: 13.5 },
-    pillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-    pickPill: {
+    hScrollRow: { gap: 8, paddingVertical: 2 },
+    buildingChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 7,
+      backgroundColor: colors.surfaceMuted,
       borderWidth: 1,
       borderColor: colors.borderStrong,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 8.5,
-      backgroundColor: colors.surfaceMuted,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
     },
-    pickPillActive: {
+    buildingChipActive: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
-    pickText: { fontSize: 13, color: colors.text, fontWeight: '600' },
-    pickTextActive: { color: '#FFFFFF' },
-    previewWrap: { position: 'relative', marginTop: 12 },
-    previewImg: { width: '100%', height: 200, borderRadius: 12 },
-    removeBadge: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      width: 28,
-      height: 28,
-      borderRadius: 999,
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
-      alignItems: 'center',
-      justifyContent: 'center',
+    buildingChipText: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+    buildingChipTextActive: { color: '#FFFFFF' },
+    roomGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
     },
-    recorderBox: {
+    roomCard: {
+      width: '48.5%',
       backgroundColor: colors.surfaceMuted,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 12,
-      padding: 13,
-      gap: 10,
+      padding: 11,
+      gap: 3,
     },
-    recorderBoxActive: {
+    roomCardActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
+    roomCardTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    roomNumber: { fontSize: 13.5, fontWeight: '800', color: colors.text },
+    roomNumberActive: { color: colors.primaryText },
+    roomName: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+    dropzone: {
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: colors.borderStrong,
+      borderRadius: 14,
+      backgroundColor: colors.surfaceMuted,
+      padding: 18,
+      alignItems: 'center',
+      gap: 6,
+    },
+    dropzoneIconWrap: {
+      width: 52,
+      height: 52,
+      borderRadius: 999,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    dropzoneTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    dropzoneSub: { fontSize: 12.5, color: colors.textMuted, textAlign: 'center', marginBottom: 8 },
+    dropzoneBtnRow: { flexDirection: 'row', gap: 10, width: '100%' },
+    previewWrap: { position: 'relative', borderRadius: 14, overflow: 'hidden' },
+    previewImg: { width: '100%', height: 215, borderRadius: 14 },
+    previewOverlayBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.78)',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    previewTag: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    previewTagText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
+    overlayActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    overlayDangerBtn: { backgroundColor: 'rgba(220, 38, 38, 0.85)' },
+    overlayActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+    studioCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      padding: 14,
+    },
+    studioCardRecording: {
       borderColor: colors.danger,
       backgroundColor: colors.dangerSoft,
     },
-    recorderInfo: {
+    micCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 999,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#1D4ED8',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 4,
+    },
+    micCircleActive: { backgroundColor: colors.danger },
+    micCircleReady: { backgroundColor: colors.success },
+    studioTitleRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: 8,
     },
-    recorderStatus: { fontSize: 13.5, fontWeight: '600', color: colors.text },
+    studioTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    studioSub: { fontSize: 12.5, color: colors.textMuted, lineHeight: 17 },
+    timerBadge: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+    },
+    timerBadgeLive: {
+      backgroundColor: colors.danger,
+      borderColor: colors.danger,
+    },
+    timerText: { fontSize: 12, fontWeight: '800', color: colors.text },
+    ctaCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.primaryBorder,
+      gap: 12,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: colors.isDark ? 0.28 : 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    ctaHeader: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+    aiIconBadge: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ctaTitle: { fontSize: 15.5, fontWeight: '800', color: colors.text },
+    ctaSub: { fontSize: 12.5, color: colors.textMuted, marginTop: 1, lineHeight: 17 },
+    manualLinkBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 8,
+    },
+    manualLinkText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
   });
 }
