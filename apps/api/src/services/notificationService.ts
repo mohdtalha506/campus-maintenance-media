@@ -1,3 +1,4 @@
+import https from 'node:https';
 import mongoose from 'mongoose';
 import type { NotificationDTO, NotificationListResponseDTO, TicketEventType } from '@campus/shared';
 import { NotificationModel, type NotificationDocument } from '../models/Notification.js';
@@ -89,38 +90,58 @@ async function sendExpoPushMessages(
   }>
 ): Promise<unknown> {
   if (messages.length === 0) return { status: 0, ok: false, error: 'no messages' };
-  if (typeof fetch !== 'function') {
-    return { status: 0, ok: false, error: 'fetch is not a function' };
-  }
-  try {
-    const res = await fetch('https://exp.pushservice.com/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+
+  const payload = JSON.stringify(messages);
+  return new Promise((resolve) => {
+    const req = https.request(
+      'https://exp.pushservice.com/api/v2/push/send',
+      {
+        method: 'POST',
+        family: 4,
+        timeout: 12000,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        },
       },
-      body: JSON.stringify(messages),
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => {
+          const rawText = Buffer.concat(chunks).toString('utf8');
+          let json: unknown = null;
+          try {
+            json = JSON.parse(rawText);
+          } catch {
+            json = rawText;
+          }
+          const status = res.statusCode ?? 0;
+          const ok = status >= 200 && status < 300;
+          if (!ok) {
+            console.error('Expo push HTTP error:', status, json);
+          }
+          resolve({ status, ok, body: json });
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error('Expo push request timed out'));
     });
-    const rawText = await res.text();
-    let json: unknown = null;
-    try {
-      json = JSON.parse(rawText);
-    } catch {
-      json = rawText;
-    }
-    if (!res.ok) {
-      console.error('Expo push HTTP error:', res.status, json);
-    }
-    return { status: res.status, ok: res.ok, body: json };
-  } catch (err) {
-    console.error('Expo push network error:', err);
-    return {
-      status: 0,
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-      hasFetch: typeof fetch === 'function',
-    };
-  }
+
+    req.on('error', (err) => {
+      console.error('Expo push network error:', err);
+      resolve({
+        status: 0,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+    req.write(payload);
+    req.end();
+  });
 }
 
 export async function notifyUsers(params: {
