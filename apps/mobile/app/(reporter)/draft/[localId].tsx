@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -18,15 +18,17 @@ import {
   PillBadge,
   SectionCard,
 } from '../../../src/components/UiPrimitives';
-import { useMobile } from '../../../src/context/MobileContext';
+import { useMobile, useTheme } from '../../../src/context/MobileContext';
 import { deleteDurableMedia } from '../../../src/storage/mediaFiles';
 import { getDraftById } from '../../../src/storage/sqliteDb';
-import { CATEGORY_STYLE, COLORS } from '../../../src/theme/tokens';
+import type { ThemeColors } from '../../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../../src/types/draft';
 
 export default function ReviewDraftScreen() {
   const { localId } = useLocalSearchParams<{ localId: string }>();
   const { drafts, isOnline, saveDraft } = useMobile();
+  const { colors, categoryStyle } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   const [draft, setDraft] = useState<LocalDraftRecord | null>(null);
@@ -213,15 +215,15 @@ export default function ReviewDraftScreen() {
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <PillBadge
             label={`AI: ${draft.aiStatus}`}
-            bg={COLORS.primarySoft}
-            fg={COLORS.primary}
+            bg={colors.primarySoft}
+            fg={colors.primaryText}
             icon="sparkles"
           />
           {draft.aiDraft?.isMock && (
             <PillBadge
               label="Mock AI Output"
-              bg={COLORS.amberSoft}
-              fg={COLORS.amber}
+              bg={colors.amberSoft}
+              fg={colors.amberText}
               icon="flask-outline"
             />
           )}
@@ -230,7 +232,7 @@ export default function ReviewDraftScreen() {
 
       {draft.aiStatus === 'queued' && (
         <View style={styles.infoBox}>
-          <Ionicons name="time-outline" size={18} color={COLORS.primary} />
+          <Ionicons name="time-outline" size={18} color={colors.primaryText} />
           <Text style={styles.infoText}>
             AI draft is queued offline and will generate automatically when connectivity returns. You
             can also enter the details manually right now.
@@ -240,20 +242,20 @@ export default function ReviewDraftScreen() {
 
       {draft.aiError && (
         <View style={styles.warnBox}>
-          <Ionicons name="warning-outline" size={18} color={COLORS.amber} />
+          <Ionicons name="warning-outline" size={18} color={colors.amber} />
           <Text style={styles.warnText}>{draft.aiError}</Text>
         </View>
       )}
 
       {error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
       {message && (
         <View style={styles.infoBox}>
-          <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.primaryText} />
           <Text style={styles.infoText}>{message}</Text>
         </View>
       )}
@@ -271,6 +273,8 @@ export default function ReviewDraftScreen() {
           value={title}
           onChangeText={setTitle}
           placeholder="Short summary of the issue"
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.primary}
         />
 
         <Text style={styles.label}>Description</Text>
@@ -280,13 +284,15 @@ export default function ReviewDraftScreen() {
           onChangeText={setDescription}
           multiline
           placeholder="Describe the maintenance problem..."
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.primary}
         />
 
         <Text style={styles.label}>Category</Text>
         <View style={styles.catGrid}>
           {MAINTENANCE_CATEGORIES.map((c) => {
             const active = category === c;
-            const cfg = CATEGORY_STYLE[c];
+            const cfg = categoryStyle[c];
             return (
               <TouchableOpacity
                 key={c}
@@ -349,80 +355,84 @@ export default function ReviewDraftScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  container: { padding: 14, gap: 12, paddingBottom: 32 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: COLORS.textMuted },
-  locationBanner: {
-    backgroundColor: COLORS.navy,
-    borderRadius: 14,
-    padding: 15,
-  },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  location: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', flex: 1 },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginTop: 10,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: COLORS.surfaceMuted,
-    color: COLORS.text,
-  },
-  transcript: { fontSize: 14, color: COLORS.text, fontStyle: 'italic', lineHeight: 20 },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  catPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: COLORS.surfaceMuted,
-  },
-  catPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  catText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
-  catTextActive: { color: '#FFFFFF' },
-  previewImg: { width: '100%', height: 200, borderRadius: 10, marginTop: 4 },
-  actions: { gap: 10, marginTop: 4 },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primarySoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  infoText: { flex: 1, color: COLORS.primary, fontSize: 13, fontWeight: '500' },
-  warnBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.amberSoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  warnText: { flex: 1, color: '#92400E', fontSize: 13 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerSoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    container: { padding: 14, gap: 12, paddingBottom: 32 },
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
+    muted: { color: colors.textMuted },
+    locationBanner: {
+      backgroundColor: colors.heroBg,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.isDark ? colors.border : 'transparent',
+    },
+    locRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    location: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', flex: 1, lineHeight: 21 },
+    label: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      marginTop: 12,
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      fontSize: 15,
+      backgroundColor: colors.surfaceMuted,
+      color: colors.text,
+    },
+    transcript: { fontSize: 14.5, color: colors.text, fontStyle: 'italic', lineHeight: 21 },
+    catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+    catPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 999,
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+      backgroundColor: colors.surfaceMuted,
+    },
+    catPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    catText: { fontSize: 13, fontWeight: '600', color: colors.text },
+    catTextActive: { color: '#FFFFFF' },
+    previewImg: { width: '100%', height: 200, borderRadius: 12, marginTop: 4 },
+    actions: { gap: 10, marginTop: 4 },
+    infoBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.primarySoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    infoText: { flex: 1, color: colors.primaryText, fontSize: 13, fontWeight: '500', lineHeight: 19 },
+    warnBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.amberSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    warnText: { flex: 1, color: colors.amberText, fontSize: 13, lineHeight: 19 },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13, lineHeight: 19 },
+  });
+}

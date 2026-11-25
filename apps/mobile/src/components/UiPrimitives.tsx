@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -10,12 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import type { MaintenanceCategory } from '@campus/shared';
-import {
-  CATEGORY_STYLE,
-  COLORS,
-  PRIORITY_STYLE,
-  STATUS_STYLE,
-} from '../theme/tokens';
+import { useTheme } from '../context/MobileContext';
+import { PRIORITY_STYLE, STATUS_STYLE, type ThemeColors } from '../theme/tokens';
 
 export const STATUS_COLORS = STATUS_STYLE;
 export const PRIORITY_COLORS = PRIORITY_STYLE;
@@ -32,7 +28,7 @@ export function PillBadge({
   icon?: string;
 }) {
   return (
-    <View style={[styles.badge, { backgroundColor: bg }]}>
+    <View style={[staticStyles.badge, { backgroundColor: bg }]}>
       {icon && (
         <Ionicons
           name={icon as keyof typeof Ionicons.glyphMap}
@@ -41,14 +37,44 @@ export function PillBadge({
           style={{ marginRight: 4 }}
         />
       )}
-      <Text style={[styles.badgeText, { color: fg }]}>{label}</Text>
+      <Text style={[staticStyles.badgeText, { color: fg }]}>{label}</Text>
     </View>
   );
 }
 
 export function CategoryChip({ category }: { category: MaintenanceCategory }) {
-  const cfg = CATEGORY_STYLE[category];
+  const { categoryStyle } = useTheme();
+  const cfg = categoryStyle[category];
   return <PillBadge label={category} bg={cfg.bg} fg={cfg.fg} icon={cfg.icon} />;
+}
+
+export function ThemeToggleButton({ lightOnDarkHeader = true }: { lightOnDarkHeader?: boolean }) {
+  const { isDark, colors, toggleTheme } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        void toggleTheme();
+      }}
+      accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={[
+        staticStyles.themeBtn,
+        {
+          backgroundColor: lightOnDarkHeader
+            ? 'rgba(255, 255, 255, 0.12)'
+            : colors.surfaceMuted,
+          borderColor: lightOnDarkHeader
+            ? 'rgba(255, 255, 255, 0.18)'
+            : colors.borderStrong,
+        },
+      ]}
+    >
+      <Ionicons
+        name={isDark ? 'sunny' : 'moon'}
+        size={16}
+        color={lightOnDarkHeader ? (isDark ? '#FBBF24' : '#E2E8F0') : colors.text}
+      />
+    </TouchableOpacity>
+  );
 }
 
 export function SectionCard({
@@ -64,6 +90,9 @@ export function SectionCard({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={[styles.sectionCard, style]}>
       {title && (
@@ -73,7 +102,7 @@ export function SectionCard({
               <Ionicons
                 name={icon as keyof typeof Ionicons.glyphMap}
                 size={16}
-                color={COLORS.primary}
+                color={colors.primaryText}
               />
             </View>
           )}
@@ -105,23 +134,29 @@ export function AppButton({
   loading?: boolean;
   style?: ViewStyle;
 }) {
+  const { colors } = useTheme();
   const bg =
     variant === 'primary'
-      ? COLORS.primary
+      ? colors.primary
       : variant === 'success'
-        ? COLORS.success
+        ? colors.success
         : variant === 'danger'
-          ? COLORS.danger
+          ? colors.danger
           : variant === 'soft'
-            ? COLORS.primarySoft
-            : COLORS.surface;
+            ? colors.primarySoft
+            : colors.surfaceMuted;
   const fg =
     variant === 'secondary'
-      ? COLORS.text
+      ? colors.text
       : variant === 'soft'
-        ? COLORS.primary
+        ? colors.primaryText
         : '#FFFFFF';
-  const borderColor = variant === 'secondary' ? COLORS.borderStrong : 'transparent';
+  const borderColor =
+    variant === 'secondary'
+      ? colors.borderStrong
+      : variant === 'soft'
+        ? colors.primaryBorder
+        : 'transparent';
 
   return (
     <TouchableOpacity
@@ -129,25 +164,31 @@ export function AppButton({
       onPress={onPress}
       disabled={disabled || loading}
       style={[
-        styles.button,
-        { backgroundColor: bg, borderColor, opacity: disabled || loading ? 0.55 : 1 },
-        variant === 'primary' || variant === 'success' ? styles.buttonElevated : undefined,
+        staticStyles.button,
+        {
+          backgroundColor: bg,
+          borderColor,
+          opacity: disabled || loading ? 0.55 : 1,
+        },
+        (variant === 'primary' || variant === 'success') && !colors.isDark
+          ? staticStyles.buttonElevated
+          : undefined,
         style,
       ]}
     >
       {loading ? (
         <ActivityIndicator color={fg} size="small" />
       ) : (
-        <View style={styles.buttonInner}>
+        <View style={staticStyles.buttonInner}>
           {icon && (
             <Ionicons
               name={icon as keyof typeof Ionicons.glyphMap}
               size={18}
               color={fg}
-              style={{ marginRight: 7 }}
+              style={title ? { marginRight: 7 } : undefined}
             />
           )}
-          <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
+          {title ? <Text style={[staticStyles.buttonText, { color: fg }]}>{title}</Text> : null}
         </View>
       )}
     </TouchableOpacity>
@@ -212,60 +253,33 @@ export function AudioPlaybackButton({
   );
 }
 
-const styles = StyleSheet.create({
+const staticStyles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
     borderRadius: 999,
     alignSelf: 'flex-start',
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
-    letterSpacing: 0.1,
+    letterSpacing: 0.15,
   },
-  sectionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 16,
+  themeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  sectionIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: COLORS.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 1,
-  },
   button: {
-    paddingVertical: 13,
+    minHeight: 46,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 11,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -273,7 +287,7 @@ const styles = StyleSheet.create({
   buttonElevated: {
     shadowColor: '#1D4ED8',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 3,
   },
@@ -285,5 +299,49 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: '700',
+    letterSpacing: 0.1,
   },
 });
+
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    sectionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: colors.isDark ? 0.28 : 0.05,
+      shadowRadius: 8,
+      elevation: colors.isDark ? 1 : 2,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 12,
+    },
+    sectionIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 9,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      fontSize: 15.5,
+      fontWeight: '700',
+      color: colors.text,
+      lineHeight: 21,
+    },
+    sectionSubtitle: {
+      fontSize: 12.5,
+      color: colors.textMuted,
+      marginTop: 1,
+      lineHeight: 17,
+    },
+  });
+}

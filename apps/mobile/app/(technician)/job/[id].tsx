@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,16 +12,18 @@ import {
   AppButton,
   AudioPlaybackButton,
   CategoryChip,
-  PRIORITY_COLORS,
   PillBadge,
-  STATUS_COLORS,
   SectionCard,
 } from '../../../src/components/UiPrimitives';
-import { COLORS } from '../../../src/theme/tokens';
+import { useTheme } from '../../../src/context/MobileContext';
+import type { ThemeColors } from '../../../src/theme/tokens';
 
 export default function TechnicianJobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, statusStyle, priorityStyle } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
+
   const [ticket, setTicket] = useState<TicketDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -77,18 +79,25 @@ export default function TechnicianJobDetailScreen() {
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
   const beforePhoto = ticket.attachments.find((a) => a.kind === 'before_photo');
   const voiceNote = ticket.attachments.find((a) => a.kind === 'voice_note');
-  const sColor = STATUS_COLORS[ticket.status];
-  const pColor = PRIORITY_COLORS[ticket.priority];
+  const sColor = statusStyle[ticket.status];
+  const pColor = priorityStyle[ticket.priority];
 
   return (
     <ScrollView
       style={styles.root}
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={load}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
       {error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -114,7 +123,7 @@ export default function TechnicianJobDetailScreen() {
         <Text style={styles.desc}>{ticket.description}</Text>
         {ticket.reopenReason && (
           <View style={[styles.errorBox, { marginTop: 10 }]}>
-            <Ionicons name="refresh-circle" size={18} color={COLORS.danger} />
+            <Ionicons name="refresh-circle" size={18} color={colors.danger} />
             <Text style={styles.errorText}>Reopened Reason: {ticket.reopenReason}</Text>
           </View>
         )}
@@ -167,31 +176,35 @@ export default function TechnicianJobDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  container: { padding: 14, gap: 12, paddingBottom: 32 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: COLORS.textMuted },
-  heroCard: {
-    backgroundColor: COLORS.navy,
-    borderRadius: 14,
-    padding: 16,
-    gap: 8,
-  },
-  badges: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
-  ticketNum: { fontSize: 13, fontWeight: '800', color: '#93C5FD', marginRight: 4 },
-  title: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 24 },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  location: { fontSize: 13, fontWeight: '500', color: '#CBD5E1', flex: 1 },
-  desc: { fontSize: 14, color: COLORS.text, lineHeight: 21 },
-  img: { width: '100%', height: 210, borderRadius: 10 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerSoft,
-    padding: 10,
-    borderRadius: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    container: { padding: 14, gap: 12, paddingBottom: 32 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
+    muted: { color: colors.textMuted },
+    heroCard: {
+      backgroundColor: colors.heroBg,
+      borderRadius: 16,
+      padding: 16,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.isDark ? colors.border : 'transparent',
+    },
+    badges: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
+    ticketNum: { fontSize: 13, fontWeight: '800', color: '#93C5FD', marginRight: 4 },
+    title: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 25 },
+    locRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    location: { fontSize: 13, fontWeight: '500', color: '#CBD5E1', flex: 1 },
+    desc: { fontSize: 14.5, color: colors.text, lineHeight: 22 },
+    img: { width: '100%', height: 210, borderRadius: 12 },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13.5, lineHeight: 19 },
+  });
+}

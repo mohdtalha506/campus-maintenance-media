@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -11,15 +11,17 @@ import {
 import {
   AudioPlaybackButton,
   CategoryChip,
-  PRIORITY_COLORS,
   PillBadge,
-  STATUS_COLORS,
   SectionCard,
 } from '../../../src/components/UiPrimitives';
-import { COLORS } from '../../../src/theme/tokens';
+import { useTheme } from '../../../src/context/MobileContext';
+import type { ThemeColors } from '../../../src/theme/tokens';
 
 export default function ReporterTicketDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, statusStyle, priorityStyle } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [ticket, setTicket] = useState<TicketDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,14 +57,21 @@ export default function ReporterTicketDetailScreen() {
   const beforePhoto = ticket.attachments.find((a) => a.kind === 'before_photo');
   const afterPhoto = ticket.attachments.find((a) => a.kind === 'after_photo');
   const voiceNote = ticket.attachments.find((a) => a.kind === 'voice_note');
-  const sColor = STATUS_COLORS[ticket.status];
-  const pColor = PRIORITY_COLORS[ticket.priority];
+  const sColor = statusStyle[ticket.status];
+  const pColor = priorityStyle[ticket.priority];
 
   return (
     <ScrollView
       style={styles.root}
       contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={load}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
       <View style={styles.heroCard}>
         <View style={styles.badges}>
@@ -84,21 +93,21 @@ export default function ReporterTicketDetailScreen() {
         <Text style={styles.desc}>{ticket.description}</Text>
         {ticket.assignee && (
           <View style={styles.assigneeRow}>
-            <Ionicons name="person-circle-outline" size={18} color={COLORS.primary} />
+            <Ionicons name="person-circle-outline" size={18} color={colors.primaryText} />
             <Text style={styles.assigneeText}>
-              Assigned to <Text style={{ fontWeight: '700' }}>{ticket.assignee.name}</Text>
+              Assigned to <Text style={{ fontWeight: '700', color: colors.text }}>{ticket.assignee.name}</Text>
             </Text>
           </View>
         )}
         {ticket.completionNote && (
           <View style={styles.successBox}>
-            <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
             <Text style={styles.successText}>Completion Note: {ticket.completionNote}</Text>
           </View>
         )}
         {ticket.reopenReason && (
           <View style={styles.errorBox}>
-            <Ionicons name="refresh-circle" size={18} color={COLORS.danger} />
+            <Ionicons name="refresh-circle" size={18} color={colors.danger} />
             <Text style={styles.errorText}>Reopen Reason: {ticket.reopenReason}</Text>
           </View>
         )}
@@ -140,7 +149,7 @@ export default function ReporterTicketDetailScreen() {
             <View
               style={[
                 styles.timelineDot,
-                index === ticket.events.length - 1 && { backgroundColor: COLORS.primary },
+                index === ticket.events.length - 1 && { backgroundColor: colors.primary },
               ]}
             />
             <View style={{ flex: 1 }}>
@@ -159,72 +168,76 @@ export default function ReporterTicketDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  container: { padding: 14, gap: 12, paddingBottom: 32 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: COLORS.textMuted },
-  heroCard: {
-    backgroundColor: COLORS.navy,
-    borderRadius: 14,
-    padding: 16,
-    gap: 8,
-  },
-  badges: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
-  ticketNum: { fontSize: 13, fontWeight: '800', color: '#93C5FD', marginRight: 4 },
-  title: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 24 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaLight: { fontSize: 13, color: '#CBD5E1', fontWeight: '500' },
-  desc: { fontSize: 14, color: COLORS.text, lineHeight: 21 },
-  assigneeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  assigneeText: { fontSize: 13, color: COLORS.textSecondary },
-  caption: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 6 },
-  img: { width: '100%', height: 210, borderRadius: 10 },
-  successBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.successSoft,
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  successText: { flex: 1, color: COLORS.success, fontSize: 13, fontWeight: '600' },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerSoft,
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13, fontWeight: '600' },
-  timelineItem: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingVertical: 6,
-    borderLeftWidth: 2,
-    borderLeftColor: COLORS.border,
-    paddingLeft: 12,
-    marginLeft: 5,
-  },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: COLORS.borderStrong,
-    marginLeft: -18,
-    marginTop: 4,
-  },
-  evTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text },
-  evMeta: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    container: { padding: 14, gap: 12, paddingBottom: 32 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.canvas },
+    muted: { color: colors.textMuted },
+    heroCard: {
+      backgroundColor: colors.heroBg,
+      borderRadius: 16,
+      padding: 16,
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.isDark ? colors.border : 'transparent',
+    },
+    badges: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
+    ticketNum: { fontSize: 13, fontWeight: '800', color: '#93C5FD', marginRight: 4 },
+    title: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 25 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    metaLight: { fontSize: 13, color: '#CBD5E1', fontWeight: '500' },
+    desc: { fontSize: 14.5, color: colors.text, lineHeight: 22 },
+    assigneeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    assigneeText: { fontSize: 13.5, color: colors.textSecondary },
+    caption: { fontSize: 12.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 },
+    img: { width: '100%', height: 210, borderRadius: 12 },
+    successBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.successSoft,
+      padding: 12,
+      borderRadius: 12,
+      marginTop: 10,
+    },
+    successText: { flex: 1, color: colors.success, fontSize: 13.5, fontWeight: '600', lineHeight: 19 },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerSoft,
+      padding: 12,
+      borderRadius: 12,
+      marginTop: 10,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13.5, fontWeight: '600', lineHeight: 19 },
+    timelineItem: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingVertical: 7,
+      borderLeftWidth: 2,
+      borderLeftColor: colors.border,
+      paddingLeft: 12,
+      marginLeft: 5,
+    },
+    timelineDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 999,
+      backgroundColor: colors.borderStrong,
+      marginLeft: -18,
+      marginTop: 4,
+    },
+    evTitle: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+    evMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  });
+}

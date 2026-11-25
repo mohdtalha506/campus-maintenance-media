@@ -1,13 +1,16 @@
+import { useMemo } from 'react';
 import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { AppButton, PillBadge } from '../../src/components/UiPrimitives';
-import { useMobile } from '../../src/context/MobileContext';
-import { COLORS } from '../../src/theme/tokens';
+import { useMobile, useTheme } from '../../src/context/MobileContext';
+import type { ThemeColors } from '../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../src/types/draft';
 
 export default function DraftsAndQueueScreen() {
   const { drafts, isOnline, syncing, runSyncNow, saveDraft, removeDraft } = useMobile();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   async function retryDraft(draft: LocalDraftRecord) {
@@ -30,7 +33,7 @@ export default function DraftsAndQueueScreen() {
           <Ionicons
             name={isOnline ? 'cloud-done' : 'cloud-offline'}
             size={18}
-            color={isOnline ? COLORS.success : COLORS.amber}
+            color={isOnline ? colors.success : colors.amber}
           />
           <Text style={styles.headerText}>
             {isOnline ? 'Connected — auto-sync active' : 'Offline — saved safely in SQLite'}
@@ -42,7 +45,7 @@ export default function DraftsAndQueueScreen() {
           variant="soft"
           onPress={runSyncNow}
           disabled={!isOnline || syncing}
-          style={{ paddingVertical: 8, paddingHorizontal: 12 }}
+          style={{ minHeight: 38, paddingVertical: 7, paddingHorizontal: 12 }}
         />
       </View>
 
@@ -52,7 +55,7 @@ export default function DraftsAndQueueScreen() {
         contentContainerStyle={{ padding: 14, gap: 12, paddingBottom: 28 }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="checkmark-done-circle-outline" size={44} color={COLORS.textMuted} />
+            <Ionicons name="checkmark-done-circle-outline" size={44} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>Queue is clear</Text>
             <Text style={styles.emptyText}>No local drafts or pending offline uploads.</Text>
           </View>
@@ -60,17 +63,17 @@ export default function DraftsAndQueueScreen() {
         renderItem={({ item }) => {
           const syncColors =
             item.syncStatus === 'synced'
-              ? { bg: COLORS.successSoft, fg: COLORS.success, icon: 'checkmark-circle' }
+              ? { bg: colors.successSoft, fg: colors.success, icon: 'checkmark-circle' }
               : item.syncStatus === 'error'
-                ? { bg: COLORS.dangerSoft, fg: COLORS.danger, icon: 'alert-circle' }
-                : { bg: COLORS.amberSoft, fg: COLORS.amber, icon: 'time-outline' };
+                ? { bg: colors.dangerSoft, fg: colors.danger, icon: 'alert-circle' }
+                : { bg: colors.amberSoft, fg: colors.amberText, icon: 'time-outline' };
 
           const aiColors =
             item.aiStatus === 'ready'
-              ? { bg: COLORS.primarySoft, fg: COLORS.primary, icon: 'sparkles' }
+              ? { bg: colors.primarySoft, fg: colors.primaryText, icon: 'sparkles' }
               : item.aiStatus === 'failed'
-                ? { bg: COLORS.dangerSoft, fg: COLORS.danger, icon: 'warning-outline' }
-                : { bg: '#F1F5F9', fg: COLORS.textSecondary, icon: 'hourglass-outline' };
+                ? { bg: colors.dangerSoft, fg: colors.danger, icon: 'warning-outline' }
+                : { bg: colors.surfaceMuted, fg: colors.textSecondary, icon: 'hourglass-outline' };
 
           return (
             <View style={styles.card}>
@@ -79,12 +82,12 @@ export default function DraftsAndQueueScreen() {
                   <Image source={{ uri: item.photoUri }} style={styles.thumb} />
                 ) : (
                   <View style={styles.thumbPlaceholder}>
-                    <Ionicons name="document-text-outline" size={20} color={COLORS.textMuted} />
+                    <Ionicons name="document-text-outline" size={20} color={colors.textMuted} />
                   </View>
                 )}
                 <View style={{ flex: 1, gap: 4 }}>
                   <View style={styles.locRow}>
-                    <Ionicons name="location-outline" size={13} color={COLORS.primary} />
+                    <Ionicons name="location-outline" size={13} color={colors.primaryText} />
                     <Text style={styles.location}>
                       {item.buildingName} · Room {item.roomNumber}
                     </Text>
@@ -124,7 +127,7 @@ export default function DraftsAndQueueScreen() {
                       title="Review"
                       icon="create-outline"
                       onPress={() => router.push(`/(reporter)/draft/${item.localId}`)}
-                      style={{ flex: 1, paddingVertical: 10 }}
+                      style={{ flex: 1, minHeight: 42, paddingVertical: 10 }}
                     />
                     {(item.aiStatus === 'failed' || item.syncStatus === 'error') && (
                       <AppButton
@@ -132,7 +135,7 @@ export default function DraftsAndQueueScreen() {
                         icon="refresh-outline"
                         variant="secondary"
                         onPress={() => retryDraft(item)}
-                        style={{ flex: 1, paddingVertical: 10 }}
+                        style={{ flex: 1, minHeight: 42, paddingVertical: 10 }}
                       />
                     )}
                     <AppButton
@@ -140,7 +143,7 @@ export default function DraftsAndQueueScreen() {
                       icon="trash-outline"
                       variant="danger"
                       onPress={() => removeDraft(item)}
-                      style={{ paddingVertical: 10, paddingHorizontal: 14 }}
+                      style={{ minHeight: 42, paddingVertical: 10, paddingHorizontal: 14 }}
                     />
                   </>
                 ) : item.serverTicketId ? (
@@ -149,7 +152,7 @@ export default function DraftsAndQueueScreen() {
                     icon="open-outline"
                     variant="soft"
                     onPress={() => router.push(`/(reporter)/ticket/${item.serverTicketId}`)}
-                    style={{ flex: 1, paddingVertical: 10 }}
+                    style={{ flex: 1, minHeight: 42, paddingVertical: 10 }}
                   />
                 ) : null}
               </View>
@@ -161,53 +164,56 @@ export default function DraftsAndQueueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  headerBar: {
-    backgroundColor: COLORS.surface,
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  headerText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, flex: 1 },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 10,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardTopRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  thumb: { width: 56, height: 56, borderRadius: 10 },
-  thumbPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.surfaceMuted,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  location: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  title: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  badgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  syncedNote: { fontSize: 13, fontWeight: '700', color: COLORS.success },
-  errorText: { fontSize: 12, color: COLORS.danger, fontWeight: '500' },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 2 },
-  empty: { padding: 48, alignItems: 'center', gap: 6 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  emptyText: { color: COLORS.textMuted, fontSize: 13, textAlign: 'center' },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    headerBar: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+    headerText: { fontSize: 12.5, fontWeight: '700', color: colors.textSecondary, flex: 1 },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 11,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: colors.isDark ? 0.25 : 0.05,
+      shadowRadius: 6,
+      elevation: colors.isDark ? 1 : 2,
+    },
+    cardTopRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+    thumb: { width: 58, height: 58, borderRadius: 12 },
+    thumbPlaceholder: {
+      width: 58,
+      height: 58,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    locRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    location: { fontSize: 12, fontWeight: '700', color: colors.primaryText },
+    title: { fontSize: 15.5, fontWeight: '700', color: colors.text, lineHeight: 21 },
+    badgeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    syncedNote: { fontSize: 13, fontWeight: '700', color: colors.success },
+    errorText: { fontSize: 12.5, color: colors.danger, fontWeight: '500', lineHeight: 18 },
+    actions: { flexDirection: 'row', gap: 8, marginTop: 2 },
+    empty: { padding: 48, alignItems: 'center', gap: 6 },
+    emptyTitle: { fontSize: 16.5, fontWeight: '700', color: colors.text },
+    emptyText: { color: colors.textMuted, fontSize: 13.5, textAlign: 'center', lineHeight: 20 },
+  });
+}

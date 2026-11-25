@@ -1,27 +1,28 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useMobile } from '../../src/context/MobileContext';
-import { COLORS } from '../../src/theme/tokens';
+import { ThemeToggleButton } from '../../src/components/UiPrimitives';
+import { useMobile, useTheme } from '../../src/context/MobileContext';
 
 export default function ReporterLayout() {
   const { isOnline, signOut, drafts } = useMobile();
+  const { colors } = useTheme();
   const pendingCount = drafts.filter((d) => d.syncStatus !== 'synced').length;
 
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.navy },
+        headerStyle: { backgroundColor: colors.heroBg },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           height: 62,
           paddingTop: 6,
           paddingBottom: 8,
-          borderTopColor: COLORS.border,
-          backgroundColor: COLORS.surface,
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -32,23 +33,24 @@ export default function ReporterLayout() {
             <View
               style={[
                 styles.connPill,
-                { backgroundColor: isOnline ? COLORS.successSoft : COLORS.dangerSoft },
+                { backgroundColor: isOnline ? colors.successSoft : colors.dangerSoft },
               ]}
             >
               <Ionicons
                 name={isOnline ? 'wifi' : 'cloud-offline'}
                 size={12}
-                color={isOnline ? COLORS.success : COLORS.danger}
+                color={isOnline ? colors.success : colors.danger}
               />
               <Text
                 style={[
                   styles.connText,
-                  { color: isOnline ? COLORS.success : COLORS.danger },
+                  { color: isOnline ? colors.success : colors.danger },
                 ]}
               >
                 {isOnline ? 'Online' : 'Offline'}
               </Text>
             </View>
+            <ThemeToggleButton />
             <TouchableOpacity onPress={signOut} style={styles.logoutBtn} accessibilityLabel="Sign out">
               <Ionicons name="log-out-outline" size={20} color="#CBD5E1" />
             </TouchableOpacity>

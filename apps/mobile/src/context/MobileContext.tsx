@@ -3,9 +3,11 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
+import { useColorScheme } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import type { BuildingDTO, RoomDTO, UserSummaryDTO } from '@campus/shared';
 import {
@@ -20,8 +22,10 @@ import {
   clearSecureSession,
   loadApiBaseUrlOverride,
   loadSecureSession,
+  loadThemeMode,
   saveApiBaseUrlOverride,
   saveSecureSession,
+  saveThemeMode,
 } from '../storage/secureSession';
 import {
   cacheLocations,
@@ -30,6 +34,17 @@ import {
   listDraftsForReporter,
   upsertDraft,
 } from '../storage/sqliteDb';
+import {
+  getCategoryStyle,
+  getPriorityStyle,
+  getStatusStyle,
+  getThemeColors,
+  type CategoryStyleMap,
+  type PriorityStyleMap,
+  type StatusStyleMap,
+  type ThemeColors,
+  type ThemeMode,
+} from '../theme/tokens';
 import type { LocalDraftRecord } from '../types/draft';
 
 interface MobileContextValue {
@@ -42,6 +57,14 @@ interface MobileContextValue {
   rooms: RoomDTO[];
   drafts: LocalDraftRecord[];
   aiReadyBanner: string | null;
+  themeMode: ThemeMode;
+  isDark: boolean;
+  colors: ThemeColors;
+  statusStyle: StatusStyleMap;
+  priorityStyle: PriorityStyleMap;
+  categoryStyle: CategoryStyleMap;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
+  toggleTheme: () => Promise<void>;
   dismissAiReadyBanner: () => void;
   updateApiBaseUrl: (url: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<UserSummaryDTO>;
@@ -56,6 +79,8 @@ interface MobileContextValue {
 const MobileContext = createContext<MobileContextValue | null>(null);
 
 export function MobileProvider({ children }: { children: React.ReactNode }) {
+  const systemScheme = useColorScheme();
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
   const [user, setUser] = useState<UserSummaryDTO | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
@@ -65,6 +90,23 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   const [rooms, setRooms] = useState<RoomDTO[]>([]);
   const [drafts, setDrafts] = useState<LocalDraftRecord[]>([]);
   const [aiReadyBanner, setAiReadyBanner] = useState<string | null>(null);
+
+  const isDark = themeMode === 'system' ? systemScheme === 'dark' : themeMode === 'dark';
+  const colors = useMemo(() => getThemeColors(isDark), [isDark]);
+  const statusStyle = useMemo(() => getStatusStyle(isDark), [isDark]);
+  const priorityStyle = useMemo(() => getPriorityStyle(isDark), [isDark]);
+  const categoryStyle = useMemo(() => getCategoryStyle(isDark), [isDark]);
+
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await saveThemeMode(mode);
+  }, []);
+
+  const toggleTheme = useCallback(async () => {
+    const next: ThemeMode = isDark ? 'light' : 'dark';
+    setThemeModeState(next);
+    await saveThemeMode(next);
+  }, [isDark]);
 
   const syncLockRef = useRef(false);
   const wasOnlineRef = useRef(true);
@@ -133,6 +175,11 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      const savedTheme = await loadThemeMode();
+      if (savedTheme && mounted) {
+        setThemeModeState(savedTheme);
+      }
+
       const override = await loadApiBaseUrlOverride();
       const isProdBuild = typeof __DEV__ === 'undefined' || !__DEV__;
       if (override && isProdBuild && override.includes('10.0.2.2')) {
@@ -267,6 +314,14 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
         rooms,
         drafts,
         aiReadyBanner,
+        themeMode,
+        isDark,
+        colors,
+        statusStyle,
+        priorityStyle,
+        categoryStyle,
+        setThemeMode,
+        toggleTheme,
         dismissAiReadyBanner: () => setAiReadyBanner(null),
         updateApiBaseUrl,
         signIn,
@@ -287,4 +342,27 @@ export function useMobile(): MobileContextValue {
   const ctx = useContext(MobileContext);
   if (!ctx) throw new Error('useMobile must be used inside MobileProvider');
   return ctx;
+}
+
+export function useTheme() {
+  const {
+    themeMode,
+    isDark,
+    colors,
+    statusStyle,
+    priorityStyle,
+    categoryStyle,
+    setThemeMode,
+    toggleTheme,
+  } = useMobile();
+  return {
+    themeMode,
+    isDark,
+    colors,
+    statusStyle,
+    priorityStyle,
+    categoryStyle,
+    setThemeMode,
+    toggleTheme,
+  };
 }

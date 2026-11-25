@@ -4,6 +4,7 @@ import type { UserSummaryDTO } from '@campus/shared';
 const TOKEN_KEY = 'cmc_auth_token';
 const USER_KEY = 'cmc_auth_user';
 const API_URL_KEY = 'cmc_api_url';
+const THEME_MODE_KEY = 'cmc_theme_mode';
 
 export interface StoredSession {
   token: string;
@@ -47,4 +48,16 @@ export async function saveApiBaseUrlOverride(url: string): Promise<void> {
 
 export async function loadApiBaseUrlOverride(): Promise<string | null> {
   return SecureStore.getItemAsync(API_URL_KEY);
+}
+
+export async function saveThemeMode(mode: 'system' | 'light' | 'dark'): Promise<void> {
+  await SecureStore.setItemAsync(THEME_MODE_KEY, mode);
+}
+
+export async function loadThemeMode(): Promise<'system' | 'light' | 'dark' | null> {
+  const val = await SecureStore.getItemAsync(THEME_MODE_KEY);
+  if (val === 'system' || val === 'light' || val === 'dark') {
+    return val;
+  }
+  return null;
 }

@@ -18,13 +18,15 @@ import {
   AudioPlaybackButton,
   SectionCard,
 } from '../../src/components/UiPrimitives';
-import { useMobile } from '../../src/context/MobileContext';
+import { useMobile, useTheme } from '../../src/context/MobileContext';
 import { persistDraftMedia } from '../../src/storage/mediaFiles';
-import { COLORS } from '../../src/theme/tokens';
+import type { ThemeColors } from '../../src/theme/tokens';
 import type { LocalDraftRecord } from '../../src/types/draft';
 
 export default function NewReportScreen() {
   const { user, buildings, rooms, isOnline, saveDraft } = useMobile();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>('');
@@ -289,7 +291,7 @@ export default function NewReportScreen() {
 
       {!isOnline && (
         <View style={styles.offlineBanner}>
-          <Ionicons name="cloud-offline" size={18} color={COLORS.amber} />
+          <Ionicons name="cloud-offline" size={18} color={colors.amber} />
           <Text style={styles.offlineText}>
             Offline mode active: cached campus locations and durable local storage are ready.
           </Text>
@@ -298,7 +300,7 @@ export default function NewReportScreen() {
 
       {error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -327,7 +329,7 @@ export default function NewReportScreen() {
                     <Ionicons
                       name="business"
                       size={14}
-                      color={active ? '#FFFFFF' : COLORS.textSecondary}
+                      color={active ? '#FFFFFF' : colors.textSecondary}
                     />
                     <Text style={[styles.pickText, active && styles.pickTextActive]}>
                       {b.name}
@@ -350,7 +352,7 @@ export default function NewReportScreen() {
                     <Ionicons
                       name="location"
                       size={14}
-                      color={active ? '#FFFFFF' : COLORS.textSecondary}
+                      color={active ? '#FFFFFF' : colors.textSecondary}
                     />
                     <Text style={[styles.pickText, active && styles.pickTextActive]}>
                       Room {r.roomNumber} · {r.name}
@@ -411,7 +413,7 @@ export default function NewReportScreen() {
               name={recording ? 'radio-button-on' : audioUri ? 'checkmark-circle' : 'mic'}
               size={22}
               color={
-                recording ? COLORS.danger : audioUri ? COLORS.success : COLORS.primary
+                recording ? colors.danger : audioUri ? colors.success : colors.primary
               }
             />
             <Text style={styles.recorderStatus}>
@@ -467,107 +469,111 @@ export default function NewReportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  container: { padding: 14, gap: 14, paddingBottom: 32 },
-  progressBarCard: {
-    backgroundColor: COLORS.navy,
-    borderRadius: 12,
-    padding: 13,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  progressTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  progressCount: { color: '#93C5FD', fontSize: 12, fontWeight: '700' },
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: COLORS.navyLight,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: '#3B82F6',
-  },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.amberSoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  offlineText: { flex: 1, color: '#92400E', fontSize: 13, fontWeight: '600' },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerSoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13, fontWeight: '500' },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginTop: 6,
-    marginBottom: 7,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  muted: { color: COLORS.textMuted, fontSize: 13 },
-  pillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  pickPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
-    borderRadius: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    backgroundColor: COLORS.surfaceMuted,
-  },
-  pickPillActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  pickText: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
-  pickTextActive: { color: '#FFFFFF' },
-  previewWrap: { position: 'relative', marginTop: 12 },
-  previewImg: { width: '100%', height: 200, borderRadius: 10 },
-  removeBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recorderBox: {
-    backgroundColor: COLORS.surfaceMuted,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  recorderBoxActive: {
-    borderColor: COLORS.danger,
-    backgroundColor: '#FEF2F2',
-  },
-  recorderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  recorderStatus: { fontSize: 13, fontWeight: '600', color: COLORS.text },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    container: { padding: 14, gap: 14, paddingBottom: 32 },
+    progressBarCard: {
+      backgroundColor: colors.heroBg,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.isDark ? colors.border : 'transparent',
+    },
+    progressHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    progressTitle: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' },
+    progressCount: { color: '#93C5FD', fontSize: 12.5, fontWeight: '700' },
+    progressTrack: {
+      height: 6,
+      borderRadius: 999,
+      backgroundColor: colors.navyLight,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 999,
+      backgroundColor: '#3B82F6',
+    },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.amberSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    offlineText: { flex: 1, color: colors.amberText, fontSize: 13, fontWeight: '600', lineHeight: 19 },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13.5, fontWeight: '500', lineHeight: 19 },
+    label: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textSecondary,
+      marginTop: 6,
+      marginBottom: 7,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+    },
+    muted: { color: colors.textMuted, fontSize: 13.5 },
+    pillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    pickPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8.5,
+      backgroundColor: colors.surfaceMuted,
+    },
+    pickPillActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    pickText: { fontSize: 13, color: colors.text, fontWeight: '600' },
+    pickTextActive: { color: '#FFFFFF' },
+    previewWrap: { position: 'relative', marginTop: 12 },
+    previewImg: { width: '100%', height: 200, borderRadius: 12 },
+    removeBadge: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 28,
+      height: 28,
+      borderRadius: 999,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recorderBox: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 13,
+      gap: 10,
+    },
+    recorderBoxActive: {
+      borderColor: colors.danger,
+      backgroundColor: colors.dangerSoft,
+    },
+    recorderInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    recorderStatus: { fontSize: 13.5, fontWeight: '600', color: colors.text },
+  });
+}

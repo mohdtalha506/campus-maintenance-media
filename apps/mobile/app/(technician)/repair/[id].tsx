@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { mobileApi } from '../../../src/api/mobileApi';
 import { AppButton, SectionCard } from '../../../src/components/UiPrimitives';
-import { COLORS } from '../../../src/theme/tokens';
+import { useTheme } from '../../../src/context/MobileContext';
+import type { ThemeColors } from '../../../src/theme/tokens';
 
 export default function SubmitRepairScreen() {
   const { id, version } = useLocalSearchParams<{ id: string; version?: string }>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -86,7 +89,7 @@ export default function SubmitRepairScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.container}>
       {error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -122,6 +125,8 @@ export default function SubmitRepairScreen() {
           value={completionNote}
           onChangeText={setCompletionNote}
           placeholder="Describe the repair performed and verification checks..."
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.primary}
         />
       </SectionCard>
 
@@ -136,28 +141,30 @@ export default function SubmitRepairScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  container: { padding: 14, gap: 12, paddingBottom: 32 },
-  img: { width: '100%', height: 210, borderRadius: 10, marginTop: 12 },
-  textarea: {
-    borderWidth: 1,
-    borderColor: COLORS.borderStrong,
-    borderRadius: 10,
-    padding: 12,
-    minHeight: 106,
-    textAlignVertical: 'top',
-    fontSize: 15,
-    backgroundColor: COLORS.surfaceMuted,
-    color: COLORS.text,
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.dangerSoft,
-    padding: 11,
-    borderRadius: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    container: { padding: 14, gap: 12, paddingBottom: 32 },
+    img: { width: '100%', height: 210, borderRadius: 12, marginTop: 12 },
+    textarea: {
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      borderRadius: 12,
+      padding: 13,
+      minHeight: 110,
+      textAlignVertical: 'top',
+      fontSize: 15,
+      backgroundColor: colors.surfaceMuted,
+      color: colors.text,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: colors.dangerSoft,
+      padding: 12,
+      borderRadius: 12,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13.5, lineHeight: 19 },
+  });
+}

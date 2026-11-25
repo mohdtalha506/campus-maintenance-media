@@ -15,10 +15,11 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
-import { MobileProvider, useMobile } from '../src/context/MobileContext';
+import { MobileProvider, useMobile, useTheme } from '../src/context/MobileContext';
 import { COLORS } from '../src/theme/tokens';
 
 function OtaUpdateBanner() {
+  const { colors } = useTheme();
   const [otaStatus, setOtaStatus] = useState<'idle' | 'downloading' | 'ready'>('idle');
 
   useEffect(() => {
@@ -47,7 +48,7 @@ function OtaUpdateBanner() {
   if (otaStatus === 'idle') return null;
 
   return (
-    <View style={styles.otaBanner}>
+    <View style={[styles.otaBanner, { backgroundColor: colors.primary }]}>
       <Ionicons
         name={otaStatus === 'ready' ? 'cloud-done' : 'cloud-download-outline'}
         size={16}
@@ -65,7 +66,7 @@ function OtaUpdateBanner() {
             void Updates.reloadAsync();
           }}
         >
-          <Text style={styles.otaBtnText}>Restart Now</Text>
+          <Text style={[styles.otaBtnText, { color: colors.primary }]}>Restart Now</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -74,6 +75,7 @@ function OtaUpdateBanner() {
 
 function RootNavigator() {
   const { user, authLoading } = useMobile();
+  const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
@@ -106,8 +108,8 @@ function RootNavigator() {
         <Stack.Screen name="(technician)" />
       </Stack>
       {authLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+        <View style={[styles.loadingOverlay, { backgroundColor: colors.canvas }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
     </View>

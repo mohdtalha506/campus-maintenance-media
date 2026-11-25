@@ -6,15 +6,15 @@ import type { TicketDTO } from '@campus/shared';
 import { mobileApi } from '../../src/api/mobileApi';
 import {
   CategoryChip,
-  PRIORITY_COLORS,
   PillBadge,
-  STATUS_COLORS,
 } from '../../src/components/UiPrimitives';
-import { useMobile } from '../../src/context/MobileContext';
-import { COLORS } from '../../src/theme/tokens';
+import { useMobile, useTheme } from '../../src/context/MobileContext';
+import type { ThemeColors } from '../../src/theme/tokens';
 
 export default function AssignedJobsScreen() {
   const { user } = useMobile();
+  const { colors, statusStyle, priorityStyle } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const [jobs, setJobs] = useState<TicketDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,27 +74,34 @@ export default function AssignedJobsScreen() {
 
       {error && (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={18} color={COLORS.danger} />
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
       <FlatList
         data={jobs}
         keyExtractor={(j) => j.id}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadJobs} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={loadJobs}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         contentContainerStyle={{ padding: 14, gap: 12, paddingBottom: 28 }}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Ionicons name="construct-outline" size={44} color={COLORS.textMuted} />
+              <Ionicons name="construct-outline" size={44} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>No jobs assigned</Text>
               <Text style={styles.emptyText}>Pull down to refresh your dispatch queue.</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => {
-          const sColor = STATUS_COLORS[item.status];
-          const pColor = PRIORITY_COLORS[item.priority];
+          const sColor = statusStyle[item.status];
+          const pColor = priorityStyle[item.priority];
           return (
             <TouchableOpacity
               activeOpacity={0.85}
@@ -105,7 +112,7 @@ export default function AssignedJobsScreen() {
               <View style={styles.cardBody}>
                 <View style={styles.topRow}>
                   <Text style={styles.ticketNum}>{item.ticketNumber}</Text>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <View style={styles.pillRow}>
                     <PillBadge
                       label={item.priority}
                       bg={pColor.bg}
@@ -120,11 +127,13 @@ export default function AssignedJobsScreen() {
                     />
                   </View>
                 </View>
-                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.title} numberOfLines={2}>
+                  {item.title}
+                </Text>
                 <View style={styles.metaRow}>
                   <View style={styles.locRow}>
-                    <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-                    <Text style={styles.meta}>
+                    <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.meta} numberOfLines={1}>
                       {item.building.name} · Room {item.room.roomNumber}
                     </Text>
                   </View>
@@ -139,72 +148,80 @@ export default function AssignedJobsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  heroStrip: {
-    backgroundColor: COLORS.navy,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-  },
-  welcome: { fontSize: 17, fontWeight: '800', color: '#FFFFFF' },
-  sub: { fontSize: 12, color: '#94A3B8', marginTop: 2, marginBottom: 12 },
-  statRow: { flexDirection: 'row', gap: 10 },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.navyLight,
-    borderRadius: 11,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-  },
-  statVal: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  statLbl: { fontSize: 11, color: '#94A3B8', fontWeight: '600', marginTop: 1 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    margin: 14,
-    padding: 11,
-    backgroundColor: COLORS.dangerSoft,
-    borderRadius: 10,
-  },
-  errorText: { flex: 1, color: COLORS.danger, fontSize: 13 },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  accentBar: { width: 5 },
-  cardBody: { flex: 1, padding: 14, gap: 8 },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  ticketNum: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
-  title: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  meta: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-  empty: { padding: 48, alignItems: 'center', gap: 6 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  emptyText: { color: COLORS.textMuted, fontSize: 13 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.canvas },
+    heroStrip: {
+      backgroundColor: colors.heroBg,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 16,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+    },
+    welcome: { fontSize: 17.5, fontWeight: '800', color: '#FFFFFF' },
+    sub: { fontSize: 12.5, color: '#94A3B8', marginTop: 2, marginBottom: 12 },
+    statRow: { flexDirection: 'row', gap: 10 },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.navyLight,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.06)',
+    },
+    statVal: { fontSize: 19, fontWeight: '800', color: '#FFFFFF' },
+    statLbl: { fontSize: 11.5, color: '#94A3B8', fontWeight: '600', marginTop: 2 },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      margin: 14,
+      padding: 12,
+      backgroundColor: colors.dangerSoft,
+      borderRadius: 12,
+    },
+    errorText: { flex: 1, color: colors.danger, fontSize: 13.5, lineHeight: 19 },
+    card: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: colors.isDark ? 0.25 : 0.05,
+      shadowRadius: 6,
+      elevation: colors.isDark ? 1 : 2,
+    },
+    accentBar: { width: 4.5 },
+    cardBody: { flex: 1, padding: 15, gap: 10 },
+    topRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    pillRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+    ticketNum: { fontSize: 13, fontWeight: '800', color: colors.primaryText, letterSpacing: 0.2 },
+    title: { fontSize: 15.5, fontWeight: '700', color: colors.text, lineHeight: 22 },
+    metaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 140 },
+    meta: { fontSize: 12.5, color: colors.textSecondary, fontWeight: '600', flexShrink: 1 },
+    empty: { padding: 48, alignItems: 'center', gap: 6 },
+    emptyTitle: { fontSize: 16.5, fontWeight: '700', color: colors.text },
+    emptyText: { color: colors.textMuted, fontSize: 13.5, textAlign: 'center', lineHeight: 20 },
+  });
+}
