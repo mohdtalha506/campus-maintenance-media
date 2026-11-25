@@ -6,6 +6,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   registerPushToken,
+  sendTestPushToUser,
   unregisterPushToken,
 } from '../services/notificationService.js';
 import { asyncHandler } from '../utils/errors.js';
@@ -57,5 +58,14 @@ notificationRouter.delete(
     const body = unregisterPushTokenSchema.parse(req.body);
     await unregisterPushToken(req.user!.id, body.token);
     res.json({ ok: true });
+  })
+);
+
+notificationRouter.post(
+  '/test-push',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const result = await sendTestPushToUser(req.user!.id);
+    res.json(result);
   })
 );

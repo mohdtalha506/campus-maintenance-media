@@ -80,15 +80,17 @@ async function sendExpoPushMessages(
   messages: Array<{
     to: string;
     sound: 'default';
+    channelId: string;
+    priority: 'high';
     title: string;
     body: string;
     badge: number;
     data: Record<string, unknown>;
   }>
-): Promise<void> {
-  if (messages.length === 0 || typeof fetch !== 'function') return;
+): Promise<unknown> {
+  if (messages.length === 0 || typeof fetch !== 'function') return null;
   try {
-    await fetch('https://exp.pushservice.com/api/v2/push/send', {
+    const res = await fetch('https://exp.pushservice.com/api/v2/push/send', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -97,8 +99,14 @@ async function sendExpoPushMessages(
       },
       body: JSON.stringify(messages),
     });
-  } catch {
-    // Push delivery failure must never break ticket workflow
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error('Expo push HTTP error:', res.status, json);
+    }
+    return json;
+  } catch (err) {
+    console.error('Expo push network error:', err);
+    return null;
   }
 }
 
@@ -150,6 +158,8 @@ export async function notifyUsers(params: {
     .map((t) => ({
       to: t.token,
       sound: 'default' as const,
+      channelId: 'default',
+      priority: 'high' as const,
       title: params.title,
       body: params.body,
       badge: unreadByUser.get(t.userId.toString()) ?? 1,
@@ -161,6 +171,41 @@ export async function notifyUsers(params: {
     }));
 
   await sendExpoPushMessages(expoMessages);
+}
+
+export async function sendTestPushToUser(userId: string): Promise<{
+  tokenCount: number;
+  tokens: string[];
+  expoResponse: unknown;
+}> {
+  const uid = new mongoose.Types.ObjectId(userId);
+  const docs = await PushTokenModel.find({ userId: uid }).lean();
+  const validTokens = docs
+    .map((d) => d.token)
+    .filter((t) => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['));
+
+  if (validTokens.length === 0) {
+    return { tokenCount: 0, tokens: [], expoResponse: null };
+  }
+
+  const expoResponse = await sendExpoPushMessages(
+    validTokens.map((token) => ({
+      to: token,
+      sound: 'default' as const,
+      channelId: 'default',
+      priority: 'high' as const,
+      title: 'Test Push Notification',
+      body: 'Push notifications are working for Campus Maintenance Copilot!',
+      badge: 1,
+      data: { eventType: 'test' },
+    }))
+  );
+
+  return {
+    tokenCount: validTokens.length,
+    tokens: validTokens.map((t) => `${t.slice(0, 24)}...`),
+    expoResponse,
+  };
 }
 
 export async function getActiveSupervisorIds(): Promise<string[]> {

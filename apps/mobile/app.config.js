@@ -1,3 +1,4 @@
+/* global module, process */
 module.exports = ({ config }) => ({
   ...config,
   android: {
