@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Campus Maintenance Copilot",
+    "slug": "campus-maintenance-copilot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "campuscopilot",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "edu.campus.maintenancecopilot",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Campus Maintenance Copilot to capture issue and repair photos."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Campus Maintenance Copilot to record maintenance voice notes."
+        }
+      ],
+      "expo-secure-store",
+      "expo-sqlite"
+    ],
+    "extra": {
+      "apiUrl": "http://10.0.2.2:4000"
+    }
+  }
+}

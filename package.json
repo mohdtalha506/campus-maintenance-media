@@ -1,0 +1,31 @@
+{
+  "name": "campus-maintenance-copilot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Field Inspection Copilot for campus maintenance with mobile offline capture, Gemini reporting, Express/MongoDB API, and React supervisor dashboard.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm --workspace=@campus/api run dev",
+    "dev:web": "npm --workspace=@campus/web run dev",
+    "dev:mobile": "npm --workspace=@campus/mobile run start",
+    "build": "npm --workspace=@campus/shared run build && npm --workspace=@campus/api run build && npm --workspace=@campus/web run build",
+    "typecheck": "npm --workspace=@campus/shared run typecheck && npm --workspace=@campus/api run typecheck && npm --workspace=@campus/web run typecheck && npm --workspace=@campus/mobile run typecheck",
+    "lint": "eslint packages apps --max-warnings=0",
+    "test": "npm --workspace=@campus/shared run test && npm --workspace=@campus/api run test && npm --workspace=@campus/web run test && npm --workspace=@campus/mobile run test",
+    "seed": "npm --workspace=@campus/api run seed"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.15.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
